@@ -26,9 +26,16 @@ namespace NNBot
 			//Client.Network.RegisterCallback(PacketType.ChatFromSimulator, ChatFromSimulatorHandler);
 			Client.Self.IM += new EventHandler<InstantMessageEventArgs> (IMHandler);
 			Client.Self.ChatFromSimulator += new EventHandler<ChatEventArgs> (ChatHandler);
+			Client.Avatars.UUIDNameReply += new EventHandler<UUIDNameReplyEventArgs> (UUIDNameHandler);
 			bool loggedIn = Client.Network.Login(configuration["firstname"], configuration["lastname"], configuration["password"], "NNBot", "NNBot 0.1");
 			if (loggedIn) Console.WriteLine("Logged In");
 			else Console.WriteLine("Failed");
+		}
+
+		private static void UUIDNameHandler(object sender, UUIDNameReplyEventArgs e)
+		{
+			foreach (UUID id in e.Names.Keys)
+				NameCache.recvName (id, e.Names [id]);
 		}
 
 		private static void ChatFromSimulatorHandler(object sender, PacketReceivedEventArgs e)
@@ -71,13 +78,7 @@ namespace NNBot
 			}
 
 			if (log) {
-				if (e.OwnerID == e.SourceID) {
-					dbw.logChat (Client.Network.CurrentSim.Name,
-						(int)e.Type, e.FromName, e.SourceID, "", Client.Self.Name, e.Message);
-				} else {
-					Client.Avatars.RequestAvatarName ();
-
-				}
+				dbw.logChatEvent(e);
 			}
 		}
 
@@ -85,9 +86,11 @@ namespace NNBot
 
 		private static void IMHandler(object sender, InstantMessageEventArgs e)
 		{
+			bool log = true;
 			switch (e.IM.Dialog) {
 			case InstantMessageDialog.StartTyping:
 			case InstantMessageDialog.StopTyping:
+				log = false;
 				break;
 			case InstantMessageDialog.RequestLure:
 				Console.WriteLine ("Teleport request from " + e.IM.FromAgentName + " , sending offer");
@@ -112,6 +115,7 @@ namespace NNBot
 						Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
 					};
 					processCommand (e.IM.Message, reply);
+					log = false;
 				} else {
 					Console.WriteLine ("[IM][" + e.IM.FromAgentName + "] " + e.IM.Message);
 				}
@@ -120,6 +124,8 @@ namespace NNBot
 				Console.WriteLine ("Unknown IM type " + e.IM.Dialog + " from " + e.IM.FromAgentName + ": " + e.IM.Message);
 				break;
 			}
+			if (log)
+				dbw.logIMEvent (e);
 		}
 
 		private static void processCommand (string command, Reply reply)
