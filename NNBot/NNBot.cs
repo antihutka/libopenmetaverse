@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using OpenMetaverse;
 using OpenMetaverse.Packets;
 
@@ -23,13 +24,22 @@ namespace NNBot
 
 			Client = new GridClient();
 			Client.Settings.LOGIN_SERVER = configuration["loginserver"];
-			//Client.Network.RegisterCallback(PacketType.ChatFromSimulator, ChatFromSimulatorHandler);
 			Client.Self.IM += new EventHandler<InstantMessageEventArgs> (IMHandler);
 			Client.Self.ChatFromSimulator += new EventHandler<ChatEventArgs> (ChatHandler);
 			Client.Avatars.UUIDNameReply += new EventHandler<UUIDNameReplyEventArgs> (UUIDNameHandler);
+			//debugEvents ();
 			bool loggedIn = Client.Network.Login(configuration["firstname"], configuration["lastname"], configuration["password"], "NNBot", "NNBot 0.1");
 			if (loggedIn) Console.WriteLine("Logged In");
 			else Console.WriteLine("Failed");
+		}
+
+		private static void debugEvents()
+		{
+			Client.Objects.ObjectProperties += new EventHandler<ObjectPropertiesEventArgs> ((object sender, ObjectPropertiesEventArgs e) => { Console.WriteLine("ObjectProperties for " + e.Properties.ObjectID);});
+			Client.Objects.ObjectPropertiesUpdated += new EventHandler<ObjectPropertiesUpdatedEventArgs> ((object sender, ObjectPropertiesUpdatedEventArgs e) => { Console.WriteLine("ObjectPropertiesUpdated for " + e.Prim.ID);});
+			Client.Objects.TerseObjectUpdate += new EventHandler<TerseObjectUpdateEventArgs> ((object sender, TerseObjectUpdateEventArgs e) => { Console.WriteLine ("TerseObjectUpdate for " + e.Prim.ID);});
+			Client.Objects.ObjectPropertiesFamily += new EventHandler<ObjectPropertiesFamilyEventArgs> ((object sender, ObjectPropertiesFamilyEventArgs e) => { Console.WriteLine ("ObjectPropertiesFamilyEventArgs for " + e.Properties.ObjectID);});
+			Client.Objects.ObjectDataBlockUpdate += new EventHandler<ObjectDataBlockUpdateEventArgs> ((object sender, ObjectDataBlockUpdateEventArgs e) => { Console.WriteLine("ObjectDataBlockUpdateEventArg for " + e.Prim.ID);});
 		}
 
 		private static void UUIDNameHandler(object sender, UUIDNameReplyEventArgs e)
@@ -139,15 +149,22 @@ namespace NNBot
 			} else
 				c = command;
 
+			Vector3 selfpos = Client.Network.CurrentSim.AvatarPositions[Client.Self.AgentID];
+
 			switch (c) {
 			case "help":
-				reply ("Commands: help logout nearby say shout whisper");
+				reply ("Commands: help inventory logout nearby objects [attach child near] say shout sit stand status whisper");
+				break;
+			case "inventory":
+				var cont = Client.Inventory.FolderContents (Client.Inventory.Store.RootFolder.UUID, Client.Self.AgentID, true, true, InventorySortOrder.ByDate, 10000);
+				cont.ForEach ((InventoryBase item) => {
+					reply(item.Name + " " + item.GetType());
+				});
 				break;
 			case "logout":
 				Client.Network.Logout();
 				break;
 			case "nearby":
-				Vector3 selfpos = Client.Network.CurrentSim.AvatarPositions[Client.Self.AgentID];
 				Client.Network.CurrentSim.ObjectsAvatars.ForEach (delegate(Avatar av) {
 					if (av.ID == Client.Self.AgentID) return;
 					Vector3 position = Client.Network.CurrentSim.AvatarPositions[av.ID];
@@ -155,11 +172,61 @@ namespace NNBot
 					reply(message);
 				});
 				break;
+			case "objects":
+				var args = a.Split ();
+				bool attach = Array.IndexOf (args, "attach") >= 0;
+				bool child = Array.IndexOf (args, "child") >= 0;
+				bool near = Array.IndexOf (args, "near") >= 0;
+
+				var prims = new List<Primitive> ();
+				Client.Network.CurrentSim.ObjectsPrimitives.ForEach ((Primitive prim) => {
+					prims.Add (prim);
+				});
+
+				prims.ForEach ((Primitive prim) => {
+					if (prim.ID == UUID.Zero) return;
+					if (attach != prim.IsAttachment) return;
+					if (!child && !attach && prim.ParentID != 0) return;
+
+					double distance = (selfpos - prim.Position).Length();
+
+					if (near && distance > 20) return;
+
+					string message = prim.ID.ToString();
+					message += " parent=" + prim.ParentID;
+					message += " dist=" + distance.ToString("#.00") + "m";
+
+					Primitive.ObjectProperties prop = ObjPropGetter.getProperties(prim);
+					if (prop != null) {
+						message += " name=" + prop.Name;
+						message += " owner=" + NameCache.getName(prop.OwnerID);
+					} else message += " <timed out>";
+					reply(message);
+					Thread.Sleep(200);
+				});
+				break;
 			case "say":
 				Client.Self.Chat (a, 0, ChatType.Normal);
 				break;
 			case "shout":
 				Client.Self.Chat (a, 0, ChatType.Shout);
+				break;
+			case "sit":
+				UUID arg = UUID.Zero;
+				if (!UUID.TryParse (a, out arg)) {
+					reply ("Invalid ID");
+				} else {
+					Client.Self.RequestSit (arg, Vector3.Zero);
+					Client.Self.Sit ();
+				}
+				break;
+			case "stand":
+				Client.Self.Stand ();
+				break;
+			case "status":
+				reply ("Location: " + Client.Network.CurrentSim.Name + " @ " + Client.Network.CurrentSim.AvatarPositions [Client.Self.AgentID]);
+				reply ("Avatar: " + Client.Network.CurrentSim.AvatarPositions.Count);
+				reply ("Objects:" + Client.Network.CurrentSim.ObjectsPrimitives.Count);
 				break;
 			case "whisper":
 				Client.Self.Chat (a, 0, ChatType.Whisper);
