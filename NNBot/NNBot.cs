@@ -138,6 +138,26 @@ namespace NNBot
 				dbw.logIMEvent (e);
 		}
 
+		private static void listInventory (UUID folder, bool recurse, Reply reply, string search)
+		{
+			List<InventoryBase> cont = Client.Inventory.FolderContents (folder, Client.Self.AgentID, true, true, InventorySortOrder.ByDate, 10000);
+			cont.ForEach ((InventoryBase item) => {
+				string message = item.Name + " " + item.GetType () + " " + item.UUID;
+				if (item is InventoryItem) message += " " + ((InventoryItem)item).AssetUUID;
+				if (search != null && !message.ToLower().Contains(search.ToLower())) return;
+				reply (message);
+				Thread.Sleep(400);
+			});
+			if (recurse) {
+				cont.ForEach ((InventoryBase item) => {
+					if (item is InventoryFolder)
+						listInventory (item.UUID, true, reply, search);
+				});
+			}
+			if (!recurse && cont.Count == 0)
+				reply ("(empty)");
+		}
+
 		private static void processCommand (string command, Reply reply)
 		{
 			command=command.Trim();
@@ -156,10 +176,15 @@ namespace NNBot
 				reply ("Commands: help inventory logout nearby objects [attach child near] say shout sit stand status whisper");
 				break;
 			case "inventory":
-				var cont = Client.Inventory.FolderContents (Client.Inventory.Store.RootFolder.UUID, Client.Self.AgentID, true, true, InventorySortOrder.ByDate, 10000);
-				cont.ForEach ((InventoryBase item) => {
-					reply(item.Name + " " + item.GetType());
-				});
+				
+				UUID folderid;
+				if (a == "") {
+					listInventory (Client.Inventory.Store.RootFolder.UUID, false, reply, null);
+				} else if (UUID.TryParse (a, out folderid)) {
+					listInventory (folderid, false, reply, null);
+				} else {
+					listInventory (Client.Inventory.Store.RootFolder.UUID, true, reply, a);
+				}
 				break;
 			case "logout":
 				Client.Network.Logout();
@@ -227,6 +252,14 @@ namespace NNBot
 				reply ("Location: " + Client.Network.CurrentSim.Name + " @ " + Client.Network.CurrentSim.AvatarPositions [Client.Self.AgentID]);
 				reply ("Avatar: " + Client.Network.CurrentSim.AvatarPositions.Count);
 				reply ("Objects:" + Client.Network.CurrentSim.ObjectsPrimitives.Count);
+				break;
+			case "teleport":
+				UUID lm_uuid;
+				if (UUID.TryParse (a, out lm_uuid)) {
+					Client.Self.Teleport (lm_uuid);
+				} else
+					Client.Self.Teleport (a, new Vector3 (128.0f, 128.0f, 128.0f));
+				
 				break;
 			case "whisper":
 				Client.Self.Chat (a, 0, ChatType.Whisper);
