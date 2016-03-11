@@ -80,7 +80,8 @@ namespace NNBot
 			case ChatType.Normal:
 			case ChatType.Whisper:
 			case ChatType.Shout:
-				Console.WriteLine  ("[local]["  +e.FromName  + "] "  +e.Message);
+				Console.WriteLine ("[local][" + e.FromName + "] " + e.Message);
+				ConversationHistory.getHistory (UUID.Zero).add (e.Message);
 				break;
 			default:
 				Console.WriteLine ("Unknown chat type " + e.Type + " from " + e.FromName + ":" + e.Message);
@@ -123,6 +124,7 @@ namespace NNBot
 					Console.WriteLine ("[command][" + e.IM.FromAgentName + "] " + e.IM.Message);
 					Reply reply = delegate(string s) {
 						Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
+						Thread.Sleep(350);
 					};
 					processCommand (e.IM.Message, reply);
 					log = false;
@@ -134,8 +136,10 @@ namespace NNBot
 				Console.WriteLine ("Unknown IM type " + e.IM.Dialog + " from " + e.IM.FromAgentName + ": " + e.IM.Message);
 				break;
 			}
-			if (log)
+			if (log) {
+				ConversationHistory.getHistory (e.IM.FromAgentID).add (e.IM.Message);
 				dbw.logIMEvent (e);
+			}
 		}
 
 		private static void listInventory (UUID folder, bool recurse, Reply reply, string search)
@@ -146,7 +150,6 @@ namespace NNBot
 				if (item is InventoryItem) message += " " + ((InventoryItem)item).AssetUUID;
 				if (search != null && !message.ToLower().Contains(search.ToLower())) return;
 				reply (message);
-				Thread.Sleep(400);
 			});
 			if (recurse) {
 				cont.ForEach ((InventoryBase item) => {
@@ -173,7 +176,10 @@ namespace NNBot
 
 			switch (c) {
 			case "help":
-				reply ("Commands: help inventory logout nearby objects [attach child near] say shout sit stand status whisper");
+				reply ("Commands: help dumphistory inventory logout nearby objects [attach child near] say shout sit stand status whisper");
+				break;
+			case "dumphistory":
+				ConversationHistory.dump (reply);
 				break;
 			case "inventory":
 				
@@ -227,7 +233,6 @@ namespace NNBot
 						message += " owner=" + NameCache.getName(prop.OwnerID);
 					} else message += " <timed out>";
 					reply(message);
-					Thread.Sleep(200);
 				});
 				break;
 			case "say":
