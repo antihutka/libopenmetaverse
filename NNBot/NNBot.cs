@@ -6,12 +6,13 @@ using OpenMetaverse.Packets;
 
 namespace NNBot
 {
-	class Bot
+	public class Bot
 	{
 		public static GridClient Client;
 		public static Dictionary<String,String> configuration;
 		public static DatabaseWriter dbw;
 		public static Random rand = new Random ();
+		static ConversationHandler localchat;
 
 		public static void Main(string[] args)
 		{
@@ -28,10 +29,16 @@ namespace NNBot
 			Client.Self.IM += new EventHandler<InstantMessageEventArgs> (IMHandler);
 			Client.Self.ChatFromSimulator += new EventHandler<ChatEventArgs> (ChatHandler);
 			Client.Avatars.UUIDNameReply += new EventHandler<UUIDNameReplyEventArgs> (UUIDNameHandler);
+			Reply talklocal = (string s) => {
+				Client.Self.Chat(s, 0, ChatType.Normal);
+			};
+			localchat = new ConversationHandler (UUID.Zero, talklocal);
 			//debugEvents ();
 			bool loggedIn = Client.Network.Login(configuration["firstname"], configuration["lastname"], configuration["password"], "NNBot", "NNBot 0.1");
-			if (loggedIn) Console.WriteLine("Logged In");
-			else Console.WriteLine("Failed");
+			if (loggedIn) {
+				Console.WriteLine ("Logged In");
+				localchat.start ();
+			} else Console.WriteLine("Failed");
 		}
 
 		private static void debugEvents()
@@ -83,6 +90,8 @@ namespace NNBot
 			case ChatType.Shout:
 				Console.WriteLine ("[local][" + e.FromName + "] " + e.Message);
 				ConversationHistory.getHistory (UUID.Zero).add (e.Message);
+				if (e.SourceID != Client.Self.AgentID)
+					localchat.incomingMessage ();
 				break;
 			default:
 				Console.WriteLine ("Unknown chat type " + e.Type + " from " + e.FromName + ":" + e.Message);
