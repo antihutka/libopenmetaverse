@@ -11,6 +11,7 @@ namespace NNBot
 		public static GridClient Client;
 		public static Dictionary<String,String> configuration;
 		public static DatabaseWriter dbw;
+		public static Random rand = new Random ();
 
 		public static void Main(string[] args)
 		{
@@ -95,6 +96,11 @@ namespace NNBot
 
 		public delegate void Reply(string s);
 
+		public static Primitive findObjectInSim(UUID id)
+		{
+			return Client.Network.CurrentSim.ObjectsPrimitives.Find ((Primitive obj) => obj.ID == id);
+		}
+
 		private static void IMHandler(object sender, InstantMessageEventArgs e)
 		{
 			bool log = true;
@@ -130,14 +136,29 @@ namespace NNBot
 					log = false;
 				} else {
 					Console.WriteLine ("[IM][" + e.IM.FromAgentName + "] " + e.IM.Message);
+					ConversationHistory.getHistory (e.IM.FromAgentID).add (e.IM.Message);
+					dbw.logIMEvent (e);
+					log = false;
+					string response = NNInterface.getLine (ConversationHistory.getHistory (e.IM.FromAgentID).get());
+					ConversationHistory.getHistory (e.IM.FromAgentID).add (response);
+					Thread.Sleep ((20 + e.IM.Message.Length + response.Length) * rand.Next (100, 400));
+					Client.Self.InstantMessage (e.IM.FromAgentID, response, e.IM.IMSessionID);
+					Console.WriteLine ("[IM][to " + e.IM.FromAgentName + "] " + response);
+					dbw.logSentIM (e.IM.FromAgentID, e.IM.FromAgentName, response);
 				}
+				break;
+			case InstantMessageDialog.MessageFromObject:
+				Primitive o = findObjectInSim (e.IM.FromAgentID);
+				UUID ownerid = (o == null) ? UUID.Zero : ObjPropGetter.getProperties(o).OwnerID;
+				string owner = NameCache.getName(ownerid);
+				Console.WriteLine ("[object][" + owner + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
+				ConversationHistory.getHistory (UUID.Zero).add (e.IM.Message);
 				break;
 			default:
 				Console.WriteLine ("Unknown IM type " + e.IM.Dialog + " from " + e.IM.FromAgentName + ": " + e.IM.Message);
 				break;
 			}
 			if (log) {
-				ConversationHistory.getHistory (e.IM.FromAgentID).add (e.IM.Message);
 				dbw.logIMEvent (e);
 			}
 		}
@@ -176,10 +197,13 @@ namespace NNBot
 
 			switch (c) {
 			case "help":
-				reply ("Commands: help dumphistory inventory logout nearby objects [attach child near] say shout sit stand status whisper");
+				reply ("Commands: help dumphistory getreply inventory logout nearby objects [attach child near] say shout sit stand status whisper");
 				break;
 			case "dumphistory":
 				ConversationHistory.dump (reply);
+				break;
+			case "getreply":
+				reply (NNInterface.getLine (a + "\n"));
 				break;
 			case "inventory":
 				
@@ -265,6 +289,15 @@ namespace NNBot
 				} else
 					Client.Self.Teleport (a, new Vector3 (128.0f, 128.0f, 128.0f));
 				
+				break;
+			case "touch":
+				if (UUID.TryParse (a, out lm_uuid)) {
+					Primitive prim = Client.Network.CurrentSim.ObjectsPrimitives.Find ((Primitive obj) => obj.ID == lm_uuid);
+					if (prim != null) {
+						Client.Self.Touch (prim.LocalID);
+						reply ("ok");
+					}
+				}
 				break;
 			case "whisper":
 				Client.Self.Chat (a, 0, ChatType.Whisper);

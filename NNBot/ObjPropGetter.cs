@@ -15,14 +15,14 @@ namespace NNBot
 			var q = new BlockingCollection<Primitive.ObjectProperties> ();
 			EventHandler<ObjectPropertiesEventArgs> handler = null;
 			handler = new EventHandler<ObjectPropertiesEventArgs> ((object sender, ObjectPropertiesEventArgs e) => {
-				Console.WriteLine("Received properties for " + e.Properties.ObjectID);
+				//Console.WriteLine("Received properties for " + e.Properties.ObjectID);
 				if (e.Properties.ObjectID == prim.ID)
 					q.Add(e.Properties);
 			});
 			Bot.Client.Objects.ObjectProperties += handler;
 			//Bot.Client.Objects.RequestObject (Bot.Client.Network.CurrentSim, prim.LocalID);
 			Bot.Client.Objects.SelectObject (Bot.Client.Network.CurrentSim, prim.LocalID, true);
-			Console.WriteLine ("Requested properties for " + prim.ID + " (" + prim.LocalID + ")");
+			//Console.WriteLine ("Requested properties for " + prim.ID + " (" + prim.LocalID + ")");
 			Primitive.ObjectProperties prop = null;
 			q.TryTake (out prop, 500);
 			Bot.Client.Objects.ObjectProperties -= handler;

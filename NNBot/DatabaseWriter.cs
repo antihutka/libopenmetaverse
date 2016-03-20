@@ -103,6 +103,14 @@ namespace NNBot
 			}
 		}
 
+		public void logObjectIM(InstantMessageEventArgs e, UUID owner)
+		{
+			string region = Bot.Client.Network.CurrentSim.Name;
+			queue.Add (() => {
+				logChat (region, -(int)e.IM.Dialog, NameCache.getName (owner), owner, "", e.IM.FromAgentID, e.IM.FromAgentName, Bot.Client.Self.Name, e.IM.Message);
+			});
+		}
+
 		private void logIM(string region, int type, string fromname, UUID fromuuid, string fromdisplayname, string botname, string message)
 		{
 			MySqlCommand cmd = conn.CreateCommand ();
@@ -116,6 +124,14 @@ namespace NNBot
 			cmd.Parameters.AddWithValue ("?botname", botname);
 			cmd.Parameters.AddWithValue ("?message", message);
 			cmd.ExecuteNonQuery ();
+		}
+
+		public void logSentIM(UUID to, string name, string message)
+		{
+			string region = Bot.Client.Network.CurrentSim.Name;
+			queue.Add (() => {
+				logIM(region, -100, name, to, "", Bot.Client.Self.Name, message);
+			});
 		}
 
 		public void logIMEvent(InstantMessageEventArgs e)
