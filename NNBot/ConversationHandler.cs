@@ -7,10 +7,12 @@ namespace NNBot
 {
 	public class ConversationHandler
 	{
+		private object lck = new object();
 		private DateTime lastHeard;
 		private DateTime lastTalked;
 		private UUID historyid;
-		Bot.Reply talk;
+		private Bot.Reply talk;
+		double debt = 50;
 		public ConversationHandler (UUID id, Bot.Reply handler)
 		{
 			talk = handler;
@@ -24,26 +26,39 @@ namespace NNBot
 			lastHeard = lastTalked;
 			Task.Run(() => {
 				while (true) {
-					Thread.Sleep(5000);
+					Thread.Sleep((int)(Convert.ToDouble(Bot.configuration["talkinterval"])*1000));
 					tick();
 				}
 			});
 		}
 
-		public void incomingMessage() {
-			lastHeard = DateTime.Now;
+		public void incomingMessage(string message) {
+			lock (lck) {
+				lastHeard = DateTime.Now;
+				debt+= message.Length;
+			}
 		}
 
 		private void tick() {
 			DateTime now = DateTime.Now;
 			double timeHeard = (now - lastHeard).TotalMinutes;
 			double timeTalked = (now - lastTalked).TotalMinutes;
-			double talkProb = 0.2;
-			if (timeHeard < 2) talkProb *= Math.Exp ((timeHeard - 2) * 3);
-			talkProb *= Math.Exp ((timeTalked - 5) / 2);
-			Console.WriteLine("timeHeard=" + timeHeard + " timeTalked=" + timeTalked + " prob=" + talkProb);
+			double talkProb = 0.05;
+			//if (timeHeard < 2) talkProb *= Math.Exp ((timeHeard - 2) * 3);
+			//talkProb *= Math.Exp ((timeTalked - 5) / 2);
+			lock (lck) {
+				if (debt > 0 && timeTalked > 0)
+					debt *= Convert.ToDouble(Bot.configuration["talkdecay"]);
+				debt -= Convert.ToDouble(Bot.configuration["talkdecrement"]);
+				talkProb *= Math.Exp (-debt / 20);
+			}
+
+			Console.WriteLine("timeHeard=" + timeHeard + " timeTalked=" + timeTalked + " debt=" + debt + " prob=" + talkProb);
 			if (Bot.rand.NextDouble() < talkProb) {
-				talk (NNInterface.getLine (ConversationHistory.getHistory (historyid).get ()));
+				string message = NNInterface.getLine (ConversationHistory.getHistory (historyid).get ());
+				if (message != "")
+					talk (message);
+				debt += 5 + message.Length;
 				lastTalked = DateTime.Now;
 			}
 		}

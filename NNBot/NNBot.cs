@@ -25,7 +25,7 @@ namespace NNBot
 			dbw = new DatabaseWriter (configuration ["dbstring"]);
 
 			Client = new GridClient();
-			Client.Settings.LOGIN_SERVER = configuration["loginserver"];
+			if (configuration["loginserver"] != "") Client.Settings.LOGIN_SERVER = configuration["loginserver"];
 			Client.Self.IM += new EventHandler<InstantMessageEventArgs> (IMHandler);
 			Client.Self.ChatFromSimulator += new EventHandler<ChatEventArgs> (ChatHandler);
 			Client.Avatars.UUIDNameReply += new EventHandler<UUIDNameReplyEventArgs> (UUIDNameHandler);
@@ -38,6 +38,8 @@ namespace NNBot
 			if (loggedIn) {
 				Console.WriteLine ("Logged In");
 				localchat.start ();
+				Thread.Sleep (3000);
+				attachStuff ();
 			} else Console.WriteLine("Failed");
 		}
 
@@ -91,7 +93,7 @@ namespace NNBot
 				Console.WriteLine ("[local][" + e.FromName + "] " + e.Message);
 				ConversationHistory.getHistory (UUID.Zero).add (e.Message);
 				if (e.SourceID != Client.Self.AgentID)
-					localchat.incomingMessage ();
+					localchat.incomingMessage (e.Message);
 				break;
 			default:
 				Console.WriteLine ("Unknown chat type " + e.Type + " from " + e.FromName + ":" + e.Message);
@@ -101,6 +103,33 @@ namespace NNBot
 			if (log) {
 				dbw.logChatEvent(e);
 			}
+		}
+
+		private static void attachStuff()
+		{
+			UUID co = Client.Inventory.FindFolderForType (FolderType.CurrentOutfit);
+			Console.WriteLine ("Current outfit folder: " + co);
+			Thread.Sleep (1000);
+			var coc = Client.Inventory.FolderContents (co, Client.Self.AgentID, true, true, InventorySortOrder.ByDate, 10000);
+			Thread.Sleep (1000);
+			if (coc == null) {
+				Console.WriteLine ("FolderContents failed");
+				return;
+			}
+			List<InventoryItem> coitems = new List<InventoryItem>();
+			coc.ForEach((InventoryBase obj) => {
+				if (obj is InventoryObject) {
+					Console.WriteLine("Adding " + obj.Name);
+					obj = Client.Inventory.FetchItem(((InventoryObject)obj).AssetUUID, Client.Self.AgentID, 10000);
+					//Client.Appearance.Detach((InventoryObject)obj);
+					//Thread.Sleep(5000);
+					Client.Appearance.Attach((InventoryObject)obj, AttachmentPoint.Default, false);
+					//Client.Appearance.AddAttachments (coitems, false);
+					Thread.Sleep(1000);
+					coitems.Clear();
+				}
+			});
+			//Client.Appearance.AddAttachments (coitems, false);
 		}
 
 		public delegate void Reply(string s);
@@ -124,7 +153,7 @@ namespace NNBot
 				break;
 			case InstantMessageDialog.RequestTeleport:
 				Console.WriteLine ("Teleport offer from " + e.IM.FromAgentName);
-				if (isOwner (e.IM.FromAgentName))
+				if (isOwner (e.IM.FromAgentName) || isinlist(configuration["accepttp"], e.IM.FromAgentName))
 					Client.Self.TeleportLureRespond (e.IM.FromAgentID, e.IM.IMSessionID, true);
 				break;
 			case InstantMessageDialog.FriendshipOffered:
@@ -139,7 +168,7 @@ namespace NNBot
 					Console.WriteLine ("[command][" + e.IM.FromAgentName + "] " + e.IM.Message);
 					Reply reply = delegate(string s) {
 						Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
-						Thread.Sleep(350);
+						Thread.Sleep(3000);
 					};
 					processCommand (e.IM.Message, reply);
 					log = false;
@@ -175,12 +204,18 @@ namespace NNBot
 		private static void listInventory (UUID folder, bool recurse, Reply reply, string search)
 		{
 			List<InventoryBase> cont = Client.Inventory.FolderContents (folder, Client.Self.AgentID, true, true, InventorySortOrder.ByDate, 10000);
+			string messagec = "";
 			cont.ForEach ((InventoryBase item) => {
 				string message = item.Name + " " + item.GetType () + " " + item.UUID;
 				if (item is InventoryItem) message += " " + ((InventoryItem)item).AssetUUID;
 				if (search != null && !message.ToLower().Contains(search.ToLower())) return;
-				reply (message);
+				messagec += message + "\n";
+				if (messagec.Length > 512) {
+					reply(messagec);
+					messagec="";
+				}
 			});
+			if (messagec != "") reply (messagec);
 			if (recurse) {
 				cont.ForEach ((InventoryBase item) => {
 					if (item is InventoryFolder)
@@ -191,22 +226,44 @@ namespace NNBot
 				reply ("(empty)");
 		}
 
+		private static void split(string str, string spliton, out string first, out string last)
+		{
+			var i = str.IndexOf (spliton);
+			if (i >= 0) {
+				first = str.Substring (0, i).Trim ();
+				last = str.Substring (i + 1).Trim ();
+			} else {
+				first = str.Trim ();
+				last = "";
+			}
+		}
+
 		private static void processCommand (string command, Reply reply)
 		{
 			command=command.Trim();
 			var i = command.IndexOf (" ");
 			string c, a = "";
-			if (i >= 0) {
-				c = command.Substring (0, i).Trim ();
-				a = command.Substring (i + 1).Trim ();
-			} else
-				c = command;
+			char[] slash = { '/' };
+			split (command, " ", out c, out a);
 
 			Vector3 selfpos = Client.Network.CurrentSim.AvatarPositions[Client.Self.AgentID];
 
 			switch (c) {
 			case "help":
 				reply ("Commands: help dumphistory getreply inventory logout nearby objects [attach child near] say shout sit stand status whisper");
+				break;
+			case "attach":
+				var l = Client.Inventory.FetchItem (UUID.Parse (a), Client.Self.AgentID, 10000);
+				Console.WriteLine ("Attaching " + l.Name);
+				Client.Appearance.Attach ((InventoryItem)l, AttachmentPoint.Default, false);
+				break;
+			case "attachstuff":
+				attachStuff ();
+				break;
+			case "detach":
+				l = Client.Inventory.FetchItem (UUID.Parse (a), Client.Self.AgentID, 10000);
+				Console.WriteLine ("Dettaching " + l.Name);
+				Client.Appearance.Detach ((InventoryItem)l);
 				break;
 			case "dumphistory":
 				ConversationHistory.dump (reply);
@@ -241,35 +298,54 @@ namespace NNBot
 				bool attach = Array.IndexOf (args, "attach") >= 0;
 				bool child = Array.IndexOf (args, "child") >= 0;
 				bool near = Array.IndexOf (args, "near") >= 0;
+				bool own = Array.IndexOf (args, "own") >= 0;
 
 				var prims = new List<Primitive> ();
 				Client.Network.CurrentSim.ObjectsPrimitives.ForEach ((Primitive prim) => {
 					prims.Add (prim);
 				});
 
+				string messagec = "";
 				prims.ForEach ((Primitive prim) => {
-					if (prim.ID == UUID.Zero) return;
-					if (attach != prim.IsAttachment) return;
-					if (!child && !attach && prim.ParentID != 0) return;
+					if (prim.ID == UUID.Zero)
+						return;
+					if (attach != prim.IsAttachment)
+						return;
+					if (!child && !attach && prim.ParentID != 0)
+						return;
 
-					double distance = (selfpos - prim.Position).Length();
+					double distance = (selfpos - prim.Position).Length ();
 
-					if (near && distance > 20) return;
+					if (near && distance > 20)
+						return;
 
-					string message = prim.ID.ToString();
+					string message = prim.ID.ToString ();
 					message += " parent=" + prim.ParentID;
-					message += " dist=" + distance.ToString("#.00") + "m";
+					message += " dist=" + distance.ToString ("#.00") + "m";
 
-					Primitive.ObjectProperties prop = ObjPropGetter.getProperties(prim);
+					Primitive.ObjectProperties prop = ObjPropGetter.getProperties (prim);
 					if (prop != null) {
 						message += " name=" + prop.Name;
-						message += " owner=" + NameCache.getName(prop.OwnerID);
-					} else message += " <timed out>";
-					reply(message);
+						message += " owner=" + NameCache.getName (prop.OwnerID);
+					} else
+						message += " <timed out>";
+					if (own && prop.OwnerID != Client.Self.AgentID) return;
+					messagec += message + "\n";
+					if (messagec.Length > 512) {
+						reply (messagec);
+						messagec = "";
+					}
 				});
+				if (messagec != "")
+					reply (messagec);
 				break;
 			case "say":
 				Client.Self.Chat (a, 0, ChatType.Normal);
+				break;
+			case "set":
+				string left, right;
+				split (a, "=", out left, out right);
+				configuration [left] = right;
 				break;
 			case "shout":
 				Client.Self.Chat (a, 0, ChatType.Shout);
@@ -288,7 +364,7 @@ namespace NNBot
 				break;
 			case "status":
 				reply ("Location: " + Client.Network.CurrentSim.Name + " @ " + Client.Network.CurrentSim.AvatarPositions [Client.Self.AgentID]);
-				reply ("Avatar: " + Client.Network.CurrentSim.AvatarPositions.Count);
+				reply ("Avatars: " + Client.Network.CurrentSim.AvatarPositions.Count);
 				reply ("Objects:" + Client.Network.CurrentSim.ObjectsPrimitives.Count);
 				break;
 			case "teleport":
@@ -319,7 +395,12 @@ namespace NNBot
 
 		private static bool isOwner(String name)
 		{
-			return configuration ["owners"].Contains ("[" + name + "]");
+			return isinlist(configuration["owners"], name);
+		}
+
+		private static bool isinlist(string h, string n)
+		{
+			return h.ToLower ().Contains ("[" + n.ToLower() + "]");
 		}
 	}
 }

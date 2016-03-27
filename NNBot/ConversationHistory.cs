@@ -38,7 +38,7 @@ namespace NNBot
 		public static ConversationHistory getHistory(UUID id) {
 			lock (staticlck) {
 				if (!conversations.ContainsKey (id))
-					conversations[id] = new ConversationHistory(2048);
+					conversations[id] = new ConversationHistory(Convert.ToInt32(Bot.configuration["historylength"]));
 				return conversations [id];
 			}
 		}
