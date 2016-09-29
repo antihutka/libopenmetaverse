@@ -173,15 +173,19 @@ namespace NNBot
 					processCommand (e.IM.Message, reply);
 					log = false;
 				} else {
-					Console.WriteLine ("[IM][" + e.IM.FromAgentName + "] " + e.IM.Message);
+					Console.WriteLine ("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
 					ConversationHistory.getHistory (e.IM.FromAgentID).add (e.IM.Message);
 					dbw.logIMEvent (e);
 					log = false;
 					string response = NNInterface.getLine (ConversationHistory.getHistory (e.IM.FromAgentID).get());
 					ConversationHistory.getHistory (e.IM.FromAgentID).add (response);
-					Thread.Sleep ((20 + e.IM.Message.Length + response.Length) * rand.Next (100, 400));
+					if (response.Equals ("")) {
+						Console.WriteLine ("Tried to send empty IM to " + e.IM.FromAgentName);
+						return;
+					}
+					//Thread.Sleep ((20 + e.IM.Message.Length + response.Length) * rand.Next (100, 400));
 					Client.Self.InstantMessage (e.IM.FromAgentID, response, e.IM.IMSessionID);
-					Console.WriteLine ("[IM][to " + e.IM.FromAgentName + "] " + response);
+					Console.WriteLine ("[IM -> " + e.IM.FromAgentName + "] " + response);
 					dbw.logSentIM (e.IM.FromAgentID, e.IM.FromAgentName, response);
 				}
 				break;
