@@ -8,6 +8,8 @@ namespace NNBot
 {
 	public class Bot
 	{
+		public delegate void Reply(string s);
+
 		public static GridClient Client;
 		public static Dictionary<String,String> configuration;
 		public static DatabaseWriter dbw;
@@ -32,7 +34,7 @@ namespace NNBot
 			Reply talklocal = (string s) => {
 				Client.Self.Chat(s, 0, ChatType.Normal);
 			};
-			localchat = new ConversationHandler (UUID.Zero, talklocal);
+			localchat = new ConversationHandler ("<local>", talklocal);
 			//debugEvents ();
 			bool loggedIn = Client.Network.Login(configuration["firstname"], configuration["lastname"], configuration["password"], "NNBot", "NNBot 0.1");
 			if (loggedIn) {
@@ -91,7 +93,7 @@ namespace NNBot
 			case ChatType.Whisper:
 			case ChatType.Shout:
 				Console.WriteLine ("[local][" + e.FromName + "] " + e.Message);
-				ConversationHistory.getHistory (UUID.Zero).add (e.Message);
+				//ConversationHistory.getHistory (UUID.Zero).add (e.Message);
 				if (e.SourceID != Client.Self.AgentID)
 					localchat.incomingMessage (e.Message);
 				break;
@@ -132,7 +134,7 @@ namespace NNBot
 			//Client.Appearance.AddAttachments (coitems, false);
 		}
 
-		public delegate void Reply(string s);
+
 
 		public static Primitive findObjectInSim(UUID id)
 		{
@@ -173,20 +175,31 @@ namespace NNBot
 					processCommand (e.IM.Message, reply);
 					log = false;
 				} else {
-					Console.WriteLine ("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
-					ConversationHistory.getHistory (e.IM.FromAgentID).add (e.IM.Message);
-					dbw.logIMEvent (e);
-					log = false;
-					string response = NNInterface.getLine (ConversationHistory.getHistory (e.IM.FromAgentID).get());
-					ConversationHistory.getHistory (e.IM.FromAgentID).add (response);
-					if (response.Equals ("")) {
-						Console.WriteLine ("Tried to send empty IM to " + e.IM.FromAgentName);
-						return;
-					}
-					//Thread.Sleep ((20 + e.IM.Message.Length + response.Length) * rand.Next (100, 400));
-					Client.Self.InstantMessage (e.IM.FromAgentID, response, e.IM.IMSessionID);
-					Console.WriteLine ("[IM -> " + e.IM.FromAgentName + "] " + response);
-					dbw.logSentIM (e.IM.FromAgentID, e.IM.FromAgentName, response);
+						Console.WriteLine ("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
+					//ConversationHistory.getHistory (e.IM.FromAgentID).add (e.IM.Message);
+						dbw.logIMEvent (e);
+						log = false;
+						/*string response = NNInterface.getLine (ConversationHistory.getHistory (e.IM.FromAgentID).get());
+						ConversationHistory.getHistory (e.IM.FromAgentID).add (response);
+						if (response.Equals ("")) {
+							Console.WriteLine ("Tried to send empty IM to " + e.IM.FromAgentName);
+							return;
+						}
+						//Thread.Sleep ((20 + e.IM.Message.Length + response.Length) * rand.Next (100, 400));
+						Client.Self.InstantMessage (e.IM.FromAgentID, response, e.IM.IMSessionID);
+						Console.WriteLine ("[IM -> " + e.IM.FromAgentName + "] " + response);
+						dbw.logSentIM (e.IM.FromAgentID, e.IM.FromAgentName, response); */
+						var nni = NNInterfaceNew.getInterface(e.IM.FromAgentName);
+						nni.pushLine(e.IM.Message);
+						nni.getLine((s) => {
+							if (s.Length == 0) {
+								Console.WriteLine("Tried to send empty IM to " + e.IM.FromAgentName);
+								return;
+							}
+							Client.Self.InstantMessage(e.IM.FromAgentID, s, e.IM.IMSessionID);
+							Console.WriteLine("[IM -> " + e.IM.FromAgentName + "] " + s);
+							dbw.logSentIM(e.IM.FromAgentID, e.IM.FromAgentName, s);
+						});
 				}
 				break;
 			case InstantMessageDialog.MessageFromObject:

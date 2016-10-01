@@ -10,14 +10,14 @@ namespace NNBot
 		private object lck = new object();
 		private DateTime lastHeard;
 		private DateTime lastTalked;
-		private UUID historyid;
+		//private UUID historyid;
+		string nnkey;
 		private Bot.Reply talk;
 		double debt = 50;
-		public ConversationHandler (UUID id, Bot.Reply handler)
+		public ConversationHandler (string key, Bot.Reply handler)
 		{
 			talk = handler;
-			historyid = id;
-
+			nnkey = key;
 		}
 
 		public void start()
@@ -33,6 +33,7 @@ namespace NNBot
 		}
 
 		public void incomingMessage(string message) {
+			NNInterfaceNew.getInterface(nnkey).pushLine(message);
 			lock (lck) {
 				lastHeard = DateTime.Now;
 				debt+= message.Length;
@@ -54,11 +55,18 @@ namespace NNBot
 			}
 
 			Console.WriteLine("timeHeard=" + timeHeard + " timeTalked=" + timeTalked + " debt=" + debt + " prob=" + talkProb);
-			if (Bot.rand.NextDouble() < talkProb) {
-				string message = NNInterface.getLine (ConversationHistory.getHistory (historyid).get ());
-				if (message != "")
-					talk (message);
-				debt += 5 + message.Length;
+			if (Bot.rand.NextDouble() < talkProb)
+			{
+				/*				string message = NNInterface.getLine (ConversationHistory.getHistory (historyid).get ());
+								if (message != "")
+									talk (message);*/
+				NNInterfaceNew.getInterface(nnkey).getLine((s) =>
+				{
+					lock (lck) debt += s.Length;
+					if (s != "")
+						talk(s);
+				});
+				lock (lck) debt += 5;
 				lastTalked = DateTime.Now;
 			}
 		}
