@@ -305,7 +305,8 @@ namespace NNBot
 			case "nearby":
 				Client.Network.CurrentSim.ObjectsAvatars.ForEach (delegate(Avatar av) {
 					if (av.ID == Client.Self.AgentID) return;
-					Vector3 position = Client.Network.CurrentSim.AvatarPositions[av.ID];
+					Vector3 position = Vector3.Zero; // = Client.Network.CurrentSim.AvatarPositions[av.ID];
+					Client.Network.CurrentSim.AvatarPositions.TryGetValue(av.ID, out position);
 					string message = av.Name + " @ " + position + (selfpos - position).Length() + "m";
 					reply(message);
 				});
