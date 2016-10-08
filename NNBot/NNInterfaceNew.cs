@@ -53,7 +53,7 @@ namespace NNBot
 			//Console.WriteLine("getLine (" + name + ")");
 			queue.Add(() =>
 			{
-				r(getResponseNow());
+				r(getResponseNow().Trim());
 			});
 		}
 

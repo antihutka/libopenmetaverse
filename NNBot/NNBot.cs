@@ -151,6 +151,7 @@ namespace NNBot
 				break;
 			case InstantMessageDialog.RequestLure:
 				Console.WriteLine ("Teleport request from " + e.IM.FromAgentName + " , sending offer");
+					if (!isOwner(e.IM.FromAgentName)) Thread.Sleep(rand.Next(5000, 15000));
 				Client.Self.SendTeleportLure (e.IM.FromAgentID);
 				break;
 			case InstantMessageDialog.RequestTeleport:
@@ -160,7 +161,9 @@ namespace NNBot
 				break;
 			case InstantMessageDialog.FriendshipOffered:
 				Console.WriteLine ("Friendship request from " + e.IM.FromAgentName + ": " + e.IM.Message);
+					Thread.Sleep(rand.Next(5000, 15000));
 				Client.Friends.AcceptFriendship (e.IM.FromAgentID, e.IM.IMSessionID);
+					Thread.Sleep(5000);
 				Client.Friends.GrantRights (e.IM.FromAgentID, FriendRights.CanSeeOnMap | FriendRights.CanSeeOnline);
 				break;
 			case InstantMessageDialog.MessageFromAgent:
@@ -203,11 +206,11 @@ namespace NNBot
 				}
 				break;
 			case InstantMessageDialog.MessageFromObject:
-				Primitive o = findObjectInSim (e.IM.FromAgentID);
-				UUID ownerid = (o == null) ? UUID.Zero : ObjPropGetter.getProperties(o).OwnerID;
-				string owner = NameCache.getName(ownerid);
-				Console.WriteLine ("[object][" + owner + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
-				ConversationHistory.getHistory (UUID.Zero).add (e.IM.Message);
+					Primitive o = findObjectInSim (e.IM.FromAgentID);
+					UUID ownerid = (o == null) ? UUID.Zero : ObjPropGetter.getProperties(o).OwnerID;
+					string owner = NameCache.getName(ownerid);
+					Console.WriteLine ("[object][" + owner + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
+					localchat.incomingMessage(e.IM.Message);
 				break;
 			default:
 				Console.WriteLine ("Unknown IM type " + e.IM.Dialog + " from " + e.IM.FromAgentName + ": " + e.IM.Message);

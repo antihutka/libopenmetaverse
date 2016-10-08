@@ -6,13 +6,12 @@ namespace NNBot
 {
 	public class ConversationHandler
 	{
-		private object lck = new object();
+		private readonly object lck = new object();
 		private DateTime lastHeard;
 		private DateTime lastTalked;
 		readonly string nnkey;
 		private readonly Bot.Reply talk;
-		double debt = 50;
-		private double othertalk = 100, selftalk = 25;
+		private double othertalk = 100, selftalk = 100;
 
 		public ConversationHandler(string key, Bot.Reply handler)
 		{
@@ -40,7 +39,6 @@ namespace NNBot
 			lock (lck)
 			{
 				lastHeard = DateTime.Now;
-				debt += message.Length;
 				othertalk += message.Length;
 			}
 		}
@@ -50,20 +48,15 @@ namespace NNBot
 			DateTime now = DateTime.Now;
 			double timeHeard = (now - lastHeard).TotalMinutes;
 			double timeTalked = (now - lastTalked).TotalMinutes;
-			double talkProb = 0.033;
-			//if (timeHeard < 2) talkProb *= Math.Exp ((timeHeard - 2) * 3);
-			//talkProb *= Math.Exp ((timeTalked - 5) / 2);
+			double talkProb = 0.01;
 			lock (lck)
 			{
-				if (debt > 0 && timeTalked > 0)
-					debt *= Convert.ToDouble(Bot.configuration["talkdecay"]);
-				debt -= Convert.ToDouble(Bot.configuration["talkdecrement"]);
-				//talkProb *= Math.Exp (-debt / 20);
-				selftalk *= 0.99;
-				othertalk *= 0.99;
-				double talkratio = selftalk / (1 + othertalk);
-				talkProb /= Math.Exp(5*talkratio);
-				if (othertalk > 2000) talkProb /= Math.Exp(othertalk - 1000);
+				selftalk *= 0.98;
+				othertalk *= 0.98;
+				double talkratio = (0 + selftalk) / (1 + othertalk);
+				//talkProb /= Math.Exp(5*talkratio);
+				talkProb /= Math.Pow(talkratio, 3) + 0.01;
+				if (othertalk > 750) talkProb /= Math.Exp((othertalk - 750)/100);
 				if (timeTalked < 1) talkProb /= Math.Exp(6 - 6*timeTalked);
 				Console.WriteLine("tHear=" + timeHeard.ToString("n4") + " tTalk=" + timeTalked.ToString("n4") +
 								  " oTalk=" + othertalk.ToString("n4") + " sTalk=" + selftalk.ToString("n4") +
@@ -72,17 +65,12 @@ namespace NNBot
 
 			if (Bot.rand.NextDouble() < talkProb)
 			{
-				/*				string message = NNInterface.getLine (ConversationHistory.getHistory (historyid).get ());
-								if (message != "")
-									talk (message);*/
 				NNInterfaceNew.getInterface(nnkey).getLine((s) =>
 				{
-					lock (lck) debt += s.Length;
 					lock (lck) selftalk += s.Length;
 					if (s != "")
 						talk(s);
 				});
-				lock (lck) debt += 5;
 				lastTalked = DateTime.Now;
 			}
 		}
