@@ -12,6 +12,7 @@ namespace NNBot
 		readonly string nnkey;
 		private readonly Bot.Reply talk;
 		private double othertalk = 100, selftalk = 100;
+		private bool thinking = false;
 
 		public ConversationHandler(string key, Bot.Reply handler)
 		{
@@ -57,7 +58,8 @@ namespace NNBot
 				//talkProb /= Math.Exp(5*talkratio);
 				talkProb /= Math.Pow(talkratio, 3) + 0.01;
 				if (othertalk > 750) talkProb /= Math.Exp((othertalk - 750)/100);
-				if (timeTalked < 1) talkProb /= Math.Exp(6 - 6*timeTalked);
+				//if (timeTalked < 1) talkProb /= Math.Exp(6 - 6*timeTalked);
+				if (thinking) talkProb = 0;
 				Console.WriteLine("tHear=" + timeHeard.ToString("n4") + " tTalk=" + timeTalked.ToString("n4") +
 								  " oTalk=" + othertalk.ToString("n4") + " sTalk=" + selftalk.ToString("n4") +
 				                  " ratio=" + talkratio.ToString("n4") + " prob=" + talkProb.ToString("n4"));
@@ -65,9 +67,14 @@ namespace NNBot
 
 			if (Bot.rand.NextDouble() < talkProb)
 			{
+				lock(lck) thinking = true;
 				NNInterfaceNew.getInterface(nnkey).getLine((s) =>
 				{
-					lock (lck) selftalk += s.Length;
+					lock (lck)
+					{
+						selftalk += s.Length;
+						thinking = false;
+					}
 					if (s != "")
 						talk(s);
 				});
