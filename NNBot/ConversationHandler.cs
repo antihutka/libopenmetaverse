@@ -61,7 +61,7 @@ namespace NNBot
 				if (othertalk > 750) talkProb /= Math.Exp((othertalk - 750)/100);
 				//if (timeTalked < 1) talkProb /= Math.Exp(6 - 6*timeTalked);
 				if (thinking) talkProb = 0;
-				if (Convert.ToInt32(Bot.configuration["talkinfo"]) > 1)
+				if (Convert.ToInt32(Bot.configuration["talkinfo"]) > 0)
 					Console.WriteLine("tHear=" + timeHeard.ToString("n4") + " tTalk=" + timeTalked.ToString("n4") +
 					 			 	  " oTalk=" + othertalk.ToString("n4") + " sTalk=" + selftalk.ToString("n4") +
 				                      " ratio=" + talkratio.ToString("n4") + " prob=" + talkProb.ToString("n4"));

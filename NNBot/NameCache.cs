@@ -34,8 +34,8 @@ namespace NNBot
 			if (id == UUID.Zero)
 				return "<zero>";
 			requestName (id);
-			for (int i = 0; i<30; i++) {
-				Thread.Sleep (500);
+			for (int i = 0; i<25; i++) {
+				Thread.Sleep (200);
 				if (names.ContainsKey (id))
 					return names [id];
 			}

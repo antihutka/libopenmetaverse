@@ -27,6 +27,8 @@ namespace NNBot
 			dbw = new DatabaseWriter (configuration ["dbstring"]);
 
 			Client = new GridClient();
+			Client.Settings.LOG_DISKCACHE = false;
+			Settings.LOG_LEVEL = Helpers.LogLevel.Info;
 			if (configuration["loginserver"] != "") Client.Settings.LOGIN_SERVER = configuration["loginserver"];
 			Client.Self.IM += new EventHandler<InstantMessageEventArgs> (IMHandler);
 			Client.Self.ChatFromSimulator += new EventHandler<ChatEventArgs> (ChatHandler);
@@ -42,6 +44,7 @@ namespace NNBot
 				localchat.start ();
 				Thread.Sleep (3000);
 				attachStuff ();
+				Client.Self.RetrieveInstantMessages();
 			} else Console.WriteLine("Failed");
 		}
 
@@ -60,46 +63,29 @@ namespace NNBot
 				NameCache.recvName (id, e.Names [id]);
 		}
 
-		private static void ChatFromSimulatorHandler(object sender, PacketReceivedEventArgs e)
-		{
-			string logMessage = "[local]";
-			ChatFromSimulatorPacket p = (ChatFromSimulatorPacket)e.Packet;
-			byte type = p.ChatData.ChatType;
-			string from = Utils.BytesToString (p.ChatData.FromName);
-			string message = Utils.BytesToString( p.ChatData.Message );
-
-			if (type == 4 || type == 5) // Ignore start/stop typing messages
-				return;
-
-			logMessage += "[from " + from + "]";
-			logMessage += "[type " + type + "]";
-			logMessage += " " + message;
-			Console.WriteLine( logMessage );
-			if( message == "date" )
-			{
-				Client.Self.Chat( "It is now " +DateTime.Now, 0, ChatType.Normal);
-			}
-		}
-
-		private static void ChatHandler(object sender, ChatEventArgs e)
+private static void ChatHandler(object sender, ChatEventArgs e)
 		{
 			bool log = true;
 			switch (e.Type) {
-			case ChatType.StopTyping:
-			case ChatType.StartTyping:
-				log = false;
-				break;
-			case ChatType.Normal:
-			case ChatType.Whisper:
-			case ChatType.Shout:
-				Console.WriteLine ("[local][" + e.FromName + "] " + e.Message);
-				//ConversationHistory.getHistory (UUID.Zero).add (e.Message);
-				if (e.SourceID != Client.Self.AgentID)
-					localchat.incomingMessage (e.Message);
-				break;
-			default:
-				Console.WriteLine ("Unknown chat type " + e.Type + " from " + e.FromName + ":" + e.Message);
-				break;
+				case ChatType.StopTyping:
+				case ChatType.StartTyping:
+					log = false;
+					break;
+				case ChatType.Normal:
+				case ChatType.Whisper:
+				case ChatType.Shout:
+					if (e.Message.Equals(""))
+					{
+						log = false;
+						break;
+					}
+					Console.WriteLine ("[local][" + e.FromName + "] " + e.Message);
+					if (e.SourceID != Client.Self.AgentID)
+						localchat.incomingMessage (e.Message);
+					break;
+				default:
+					Console.WriteLine ("Unknown chat type " + e.Type + " from " + e.FromName + ":" + e.Message);
+					break;
 			}
 
 			if (log) {
@@ -123,15 +109,11 @@ namespace NNBot
 				if (obj is InventoryObject) {
 					Console.WriteLine("Adding " + obj.Name);
 					obj = Client.Inventory.FetchItem(((InventoryObject)obj).AssetUUID, Client.Self.AgentID, 10000);
-					//Client.Appearance.Detach((InventoryObject)obj);
-					//Thread.Sleep(5000);
 					Client.Appearance.Attach((InventoryObject)obj, AttachmentPoint.Default, false);
-					//Client.Appearance.AddAttachments (coitems, false);
 					Thread.Sleep(1000);
 					coitems.Clear();
 				}
 			});
-			//Client.Appearance.AddAttachments (coitems, false);
 		}
 
 
@@ -179,19 +161,8 @@ namespace NNBot
 					log = false;
 				} else {
 						Console.WriteLine ("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
-					//ConversationHistory.getHistory (e.IM.FromAgentID).add (e.IM.Message);
 						dbw.logIMEvent (e);
 						log = false;
-						/*string response = NNInterface.getLine (ConversationHistory.getHistory (e.IM.FromAgentID).get());
-						ConversationHistory.getHistory (e.IM.FromAgentID).add (response);
-						if (response.Equals ("")) {
-							Console.WriteLine ("Tried to send empty IM to " + e.IM.FromAgentName);
-							return;
-						}
-						//Thread.Sleep ((20 + e.IM.Message.Length + response.Length) * rand.Next (100, 400));
-						Client.Self.InstantMessage (e.IM.FromAgentID, response, e.IM.IMSessionID);
-						Console.WriteLine ("[IM -> " + e.IM.FromAgentName + "] " + response);
-						dbw.logSentIM (e.IM.FromAgentID, e.IM.FromAgentName, response); */
 						var nni = NNInterfaceNew.getInterface(e.IM.FromAgentName);
 						nni.pushLine(e.IM.Message);
 						nni.getLine((s) => {
@@ -270,7 +241,7 @@ namespace NNBot
 
 			switch (c) {
 			case "help":
-				reply ("Commands: help dumphistory getreply inventory logout nearby objects [attach child near] say shout sit stand status whisper");
+				reply ("Commands: help inventory logout nearby objects [attach child near] say shout sit stand status whisper");
 				break;
 			case "attach":
 				var l = Client.Inventory.FetchItem (UUID.Parse (a), Client.Self.AgentID, 10000);
@@ -284,12 +255,6 @@ namespace NNBot
 				l = Client.Inventory.FetchItem (UUID.Parse (a), Client.Self.AgentID, 10000);
 				Console.WriteLine ("Dettaching " + l.Name);
 				Client.Appearance.Detach ((InventoryItem)l);
-				break;
-			case "dumphistory":
-				ConversationHistory.dump (reply);
-				break;
-			case "getreply":
-				reply (NNInterface.getLine (a + "\n"));
 				break;
 			case "inventory":
 				
@@ -308,7 +273,7 @@ namespace NNBot
 			case "nearby":
 				Client.Network.CurrentSim.ObjectsAvatars.ForEach (delegate(Avatar av) {
 					if (av.ID == Client.Self.AgentID) return;
-					Vector3 position = Vector3.Zero; // = Client.Network.CurrentSim.AvatarPositions[av.ID];
+					Vector3 position = Vector3.Zero;
 					Client.Network.CurrentSim.AvatarPositions.TryGetValue(av.ID, out position);
 					string message = av.Name + " @ " + position + (selfpos - position).Length() + "m";
 					reply(message);
