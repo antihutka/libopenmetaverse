@@ -154,8 +154,9 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 				} else if (isOwner (e.IM.FromAgentName)) {
 					Console.WriteLine ("[command][" + e.IM.FromAgentName + "] " + e.IM.Message);
 					Reply reply = delegate(string s) {
-						Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
-						Thread.Sleep(3000);
+						//Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
+						//Thread.Sleep(3000);
+						Console.WriteLine(s);
 					};
 					processCommand (e.IM.Message, reply);
 					log = false;
@@ -275,7 +276,7 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 					if (av.ID == Client.Self.AgentID) return;
 					Vector3 position = Vector3.Zero;
 					Client.Network.CurrentSim.AvatarPositions.TryGetValue(av.ID, out position);
-					string message = av.Name + " @ " + position + (selfpos - position).Length() + "m";
+					string message = av.Name + " @ " + position + " " + (selfpos - position).Length() + "m";
 					reply(message);
 				});
 				break;
