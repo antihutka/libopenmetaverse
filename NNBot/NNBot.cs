@@ -69,6 +69,7 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 			switch (e.Type) {
 				case ChatType.StopTyping:
 				case ChatType.StartTyping:
+				case ChatType.Debug:
 					log = false;
 					break;
 				case ChatType.Normal:
@@ -81,7 +82,7 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 					}
 					Console.WriteLine ("[local][" + e.FromName + "] " + e.Message);
 					if (e.SourceID != Client.Self.AgentID)
-						localchat.incomingMessage (e.Message);
+						localchat.incomingMessage (e.Message, false);
 					break;
 				default:
 					Console.WriteLine ("Unknown chat type " + e.Type + " from " + e.FromName + ":" + e.Message);
@@ -182,7 +183,7 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 					UUID ownerid = (o == null) ? UUID.Zero : ObjPropGetter.getProperties(o).OwnerID;
 					string owner = NameCache.getName(ownerid);
 					Console.WriteLine ("[object][" + owner + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
-					localchat.incomingMessage(e.IM.Message);
+					localchat.incomingMessage(e.IM.Message, true);
 				break;
 			default:
 				Console.WriteLine ("Unknown IM type " + e.IM.Dialog + " from " + e.IM.FromAgentName + ": " + e.IM.Message);
