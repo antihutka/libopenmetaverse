@@ -34,6 +34,11 @@ namespace NNBot
 			Client.Self.ChatFromSimulator += new EventHandler<ChatEventArgs> (ChatHandler);
 			Client.Avatars.UUIDNameReply += new EventHandler<UUIDNameReplyEventArgs> (UUIDNameHandler);
 			Reply talklocal = (string s) => {
+				if (Client.Network.CurrentSim.Access == SimAccess.PG)
+				{
+					Console.WriteLine("Chat message blocked because of sim rating: " + s);
+					return;
+				}
 				Client.Self.Chat(s, 0, ChatType.Normal);
 			};
 			localchat = new ConversationHandler ("<local>", talklocal);
