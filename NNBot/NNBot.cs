@@ -133,66 +133,70 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 		{
 			bool log = true;
 			switch (e.IM.Dialog) {
-			case InstantMessageDialog.StartTyping:
-			case InstantMessageDialog.StopTyping:
-				log = false;
-				break;
-			case InstantMessageDialog.RequestLure:
-				Console.WriteLine ("Teleport request from " + e.IM.FromAgentName + " , sending offer");
-					if (!isOwner(e.IM.FromAgentName)) Thread.Sleep(rand.Next(5000, 15000));
-				Client.Self.SendTeleportLure (e.IM.FromAgentID);
-				break;
-			case InstantMessageDialog.RequestTeleport:
-				Console.WriteLine ("Teleport offer from " + e.IM.FromAgentName);
-				if (isOwner (e.IM.FromAgentName) || isinlist(configuration["accepttp"], e.IM.FromAgentName))
-					Client.Self.TeleportLureRespond (e.IM.FromAgentID, e.IM.IMSessionID, true);
-				break;
-			case InstantMessageDialog.FriendshipOffered:
-				Console.WriteLine ("Friendship request from " + e.IM.FromAgentName + ": " + e.IM.Message);
-					Thread.Sleep(rand.Next(5000, 15000));
-				Client.Friends.AcceptFriendship (e.IM.FromAgentID, e.IM.IMSessionID);
-					Thread.Sleep(5000);
-				Client.Friends.GrantRights (e.IM.FromAgentID, FriendRights.CanSeeOnMap | FriendRights.CanSeeOnline);
-				break;
-			case InstantMessageDialog.MessageFromAgent:
-				if (e.IM.ToAgentID != Client.Self.AgentID) {
-					Console.WriteLine ("[group][" + e.IM.ToAgentID + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
-				} else if (isOwner (e.IM.FromAgentName)) {
-					Console.WriteLine ("[command][" + e.IM.FromAgentName + "] " + e.IM.Message);
-					Reply reply = delegate(string s) {
-						//Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
-						//Thread.Sleep(3000);
-						Console.WriteLine(s);
-					};
-					processCommand (e.IM.Message, reply);
+				case InstantMessageDialog.StartTyping:
+				case InstantMessageDialog.StopTyping:
 					log = false;
-				} else {
-						Console.WriteLine ("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
-						dbw.logIMEvent (e);
+					break;
+				case InstantMessageDialog.RequestLure:
+					Console.WriteLine ("Teleport request from " + e.IM.FromAgentName + " , sending offer");
+						if (!isOwner(e.IM.FromAgentName)) Thread.Sleep(rand.Next(5000, 15000));
+					Client.Self.SendTeleportLure (e.IM.FromAgentID);
+					break;
+				case InstantMessageDialog.RequestTeleport:
+					Console.WriteLine ("Teleport offer from " + e.IM.FromAgentName);
+					if (isOwner (e.IM.FromAgentName) || isinlist(configuration["accepttp"], e.IM.FromAgentName))
+						Client.Self.TeleportLureRespond (e.IM.FromAgentID, e.IM.IMSessionID, true);
+					break;
+				case InstantMessageDialog.FriendshipOffered:
+					Console.WriteLine ("Friendship request from " + e.IM.FromAgentName + ": " + e.IM.Message);
+						Thread.Sleep(rand.Next(5000, 15000));
+					Client.Friends.AcceptFriendship (e.IM.FromAgentID, e.IM.IMSessionID);
+						Thread.Sleep(5000);
+					Client.Friends.GrantRights (e.IM.FromAgentID, FriendRights.CanSeeOnMap | FriendRights.CanSeeOnline);
+					break;
+				case InstantMessageDialog.MessageFromAgent:
+					if (e.IM.ToAgentID != Client.Self.AgentID) {
+						Console.WriteLine ("[group][" + e.IM.ToAgentID + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
+					} else if (isOwner (e.IM.FromAgentName)) {
+						Console.WriteLine ("[command][" + e.IM.FromAgentName + "] " + e.IM.Message);
+						Reply reply = delegate(string s) {
+							//Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
+							//Thread.Sleep(3000);
+							Console.WriteLine(s);
+						};
+						processCommand (e.IM.Message, reply);
 						log = false;
-						var nni = NNInterfaceNew.getInterface(e.IM.FromAgentName);
-						nni.pushLine(e.IM.Message);
-						nni.getLine((s) => {
-							if (s.Length == 0) {
-								Console.WriteLine("Tried to send empty IM to " + e.IM.FromAgentName);
-								return;
-							}
-							Client.Self.InstantMessage(e.IM.FromAgentID, s, e.IM.IMSessionID);
-							Console.WriteLine("[IM -> " + e.IM.FromAgentName + "] " + s);
-							dbw.logSentIM(e.IM.FromAgentID, e.IM.FromAgentName, s);
-						});
-				}
-				break;
-			case InstantMessageDialog.MessageFromObject:
+					} else {
+							Console.WriteLine ("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
+							dbw.logIMEvent (e);
+							log = false;
+							var nni = NNInterfaceNew.getInterface(e.IM.FromAgentName);
+							nni.pushLine(e.IM.Message);
+							nni.getLine((s) => {
+								if (s.Length == 0) {
+									Console.WriteLine("Tried to send empty IM to " + e.IM.FromAgentName);
+									return;
+								}
+								Client.Self.InstantMessage(e.IM.FromAgentID, s, e.IM.IMSessionID);
+								Console.WriteLine("[IM -> " + e.IM.FromAgentName + "] " + s);
+								dbw.logSentIM(e.IM.FromAgentID, e.IM.FromAgentName, s);
+							});
+					}
+					break;
+				case InstantMessageDialog.MessageFromObject:
 					Primitive o = findObjectInSim (e.IM.FromAgentID);
 					UUID ownerid = (o == null) ? UUID.Zero : ObjPropGetter.getProperties(o).OwnerID;
+					bool ignored = isinlist(configuration["ignoreobjectchat"], e.IM.FromAgentID.ToString());
 					string owner = NameCache.getName(ownerid);
-					Console.WriteLine ("[object][" + owner + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
-					localchat.incomingMessage(e.IM.Message, true);
-				break;
-			default:
-				Console.WriteLine ("Unknown IM type " + e.IM.Dialog + " from " + e.IM.FromAgentName + ": " + e.IM.Message);
-				break;
+					Console.WriteLine ("[object][" + (ignored ? "ign][" : "") + owner + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
+					if (!ignored) localchat.incomingMessage(e.IM.Message, true);
+					break;
+				case InstantMessageDialog.SessionSend:
+					Console.WriteLine("[session][" + e.IM.FromAgentName + "] " + e.IM.Message);
+					break;
+				default:
+					Console.WriteLine ("Unknown IM type " + e.IM.Dialog + " from " + e.IM.FromAgentName + ": " + e.IM.Message);
+					break;
 			}
 			if (log) {
 				dbw.logIMEvent (e);

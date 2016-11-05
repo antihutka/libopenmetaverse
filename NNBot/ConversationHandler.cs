@@ -14,7 +14,7 @@ namespace NNBot
 		private DateTime lastTalked;
 		readonly string nnkey;
 		private readonly Bot.Reply talk;
-		private double othertalk = 100, selftalk = 100, boost = 0;
+		private double othertalk = 1, selftalk = 100, boost = 0;
 		private bool thinking = false;
 		string kw_last;
 		string[] kw_split;
@@ -68,16 +68,17 @@ namespace NNBot
 				double td = Convert.ToDouble(Bot.configuration["talkdecay"]);
 				selftalk *= td;
 				othertalk *= td;
-				double talkratio = (0 + selftalk) / (1 + othertalk + boost);
-				talkratio /= Convert.ToDouble(Bot.configuration["targetratio"]);
+				double targetratio = Convert.ToDouble(Bot.configuration["targetratio"]);
+				double talkratio = (targetratio + selftalk) / (1 + othertalk + boost);
+				talkratio /= targetratio;
 				//talkProb /= Math.Exp(5*talkratio);
-				talkProb /= Math.Pow(talkratio, 4) + 0.01;
-				if (selftalk + othertalk > 1000) talkProb /= Math.Exp((selftalk + othertalk - 1000)/250);
+				talkProb /= Math.Pow(talkratio, 8) + 0.01;
+				if (selftalk + othertalk > 900) talkProb /= Math.Exp((selftalk + othertalk - 900)/350);
 				//if (timeTalked < 1) talkProb /= Math.Exp(6 - 6*timeTalked);
 				if (thinking) talkProb = 0;
 				string message = "tHear=" + timeHeard.ToString("n2") + " tTalk=" + timeTalked.ToString("n2") + " boost=" + boost.ToString("n0") +
 								 " oTalk=" + othertalk.ToString("n4") + " sTalk=" + selftalk.ToString("n4") +
-								 " ratio=" + talkratio.ToString("n4") + " prob=" + talkProb.ToString("n4");
+				                                     " ratio=" + talkratio.ToString("n4") + " prob=" + (talkProb*100).ToString("n2") + "%";
 				if (Convert.ToInt32(Bot.configuration["talkinfo"]) > 0)
 					                                     Console.WriteLine(message);
 				Console.Title = message;

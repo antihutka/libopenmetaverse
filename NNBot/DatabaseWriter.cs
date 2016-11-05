@@ -28,7 +28,13 @@ namespace NNBot
 			conn.ConnectionString = connstring;
 			while (true) {
 				try {
-					conn.Open ();
+					conn.Open();
+					if (Convert.ToInt32(Bot.configuration["mysqlhack"]) > 0)
+					{
+						var cmd = conn.CreateCommand();
+						cmd.CommandText = "SET NAMES utf8mb4;";
+						cmd.ExecuteNonQuery();
+					}
 					return;
 				} catch (MySql.Data.MySqlClient.MySqlException ex) {
 					System.Console.WriteLine ("Mysql connect error: " + ex.Message);
