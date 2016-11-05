@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ namespace NNBot
 		private bool thinking = false;
 		string kw_last;
 		string[] kw_split;
+		StreamWriter logfile = new StreamWriter("talkinfo.log");
 
 		public ConversationHandler(string key, Bot.Reply handler)
 		{
@@ -82,6 +84,7 @@ namespace NNBot
 				if (Convert.ToInt32(Bot.configuration["talkinfo"]) > 0)
 					                                     Console.WriteLine(message);
 				Console.Title = message;
+				logfile.WriteLine(message); logfile.Flush();
 			}
 
 			if (Bot.rand.NextDouble() < talkProb)
