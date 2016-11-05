@@ -159,11 +159,10 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 						Console.WriteLine ("[group][" + e.IM.ToAgentID + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
 					} else if (isOwner (e.IM.FromAgentName)) {
 						Console.WriteLine ("[command][" + e.IM.FromAgentName + "] " + e.IM.Message);
-						Reply reply = delegate(string s) {
+						Reply reply = s =>
 							//Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
 							//Thread.Sleep(3000);
 							Console.WriteLine(s);
-						};
 						processCommand (e.IM.Message, reply);
 						log = false;
 					} else {
@@ -282,7 +281,8 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 				Client.Network.Logout();
 				break;
 			case "nearby":
-				Client.Network.CurrentSim.ObjectsAvatars.ForEach (delegate(Avatar av) {
+				Client.Network.CurrentSim.ObjectsAvatars.ForEach (av =>
+				{
 					if (av.ID == Client.Self.AgentID) return;
 					Vector3 position = Vector3.Zero;
 					Client.Network.CurrentSim.AvatarPositions.TryGetValue(av.ID, out position);
