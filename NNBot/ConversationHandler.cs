@@ -71,12 +71,13 @@ namespace NNBot
 				selftalk *= td;
 				othertalk *= td;
 				double targetratio = Convert.ToDouble(Bot.configuration["targetratio"]);
-				double talkratio = (targetratio + selftalk) / (1 + othertalk + boost);
+				double talkadd = Convert.ToDouble(Bot.configuration["talkadd"]);
+				double talkratio = (talkadd*targetratio + selftalk) / (talkadd + othertalk + boost);
 				talkratio /= targetratio;
-				//talkProb /= Math.Exp(5*talkratio);
 				talkProb /= Math.Pow(talkratio, 8) + 0.01;
-				if (selftalk + othertalk > 900) talkProb /= Math.Exp((selftalk + othertalk - 900)/350);
-				//if (timeTalked < 1) talkProb /= Math.Exp(6 - 6*timeTalked);
+				double talkthr = Convert.ToDouble(Bot.configuration["talkthr"]);
+				double talkthrdiv = Convert.ToDouble(Bot.configuration["talkthrdiv"]);
+				if (selftalk + othertalk > talkthr) talkProb /= Math.Exp((selftalk + othertalk - talkthr)/(talkthrdiv));
 				if (thinking) talkProb = 0;
 				string message = "tHear=" + timeHeard.ToString("n2") + " tTalk=" + timeTalked.ToString("n2") + " boost=" + boost.ToString("n0") +
 								 " oTalk=" + othertalk.ToString("n4") + " sTalk=" + selftalk.ToString("n4") +
