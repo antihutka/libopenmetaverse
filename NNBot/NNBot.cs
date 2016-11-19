@@ -155,15 +155,21 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 					Client.Friends.GrantRights (e.IM.FromAgentID, FriendRights.CanSeeOnMap | FriendRights.CanSeeOnline);
 					break;
 				case InstantMessageDialog.MessageFromAgent:
-					if (e.IM.ToAgentID != Client.Self.AgentID) {
-						Console.WriteLine ("[group][" + e.IM.ToAgentID + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
-					} else if (isOwner (e.IM.FromAgentName)) {
-						Console.WriteLine ("[command][" + e.IM.FromAgentName + "] " + e.IM.Message);
+					if (e.IM.ToAgentID != Client.Self.AgentID)
+					{
+						Console.WriteLine("[group][" + e.IM.ToAgentID + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
+					}
+					else if (isOwner(e.IM.FromAgentName))
+					{
+						Console.WriteLine("[command][" + e.IM.FromAgentName + "] " + e.IM.Message);
 						Reply reply = s =>
 							//Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
 							//Thread.Sleep(3000);
 							Console.WriteLine(s);
-						processCommand (e.IM.Message, reply);
+						processCommand(e.IM.Message, reply);
+						log = false;
+					} else if (e.IM.FromAgentName.Equals("Second Life")) {
+						Console.WriteLine("[UserOffline] " + NameCache.getName(e.IM.FromAgentID));
 						log = false;
 					} else {
 							Console.WriteLine ("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
