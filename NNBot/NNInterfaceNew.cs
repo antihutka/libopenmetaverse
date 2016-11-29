@@ -5,6 +5,7 @@ using System.Text;
 using System.Net.Sockets;
 using System.IO;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace NNBot
 {
@@ -60,6 +61,7 @@ namespace NNBot
 		private void pushLineNow(string line)
 		{
 			if (connection == null) return;
+			line = Regex.Replace(line, @"^\s+$[\r\n]*", "", RegexOptions.Multiline);
 			byte[] lineb = Encoding.UTF8.GetBytes(line + "\n");
 			try
 			{
