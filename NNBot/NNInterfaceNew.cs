@@ -61,7 +61,7 @@ namespace NNBot
 		private void pushLineNow(string line)
 		{
 			if (connection == null) return;
-			line = Regex.Replace(line, @"^\s+$[\r\n]*", "", RegexOptions.Multiline);
+			line = Regex.Replace(line, @"^\s*$[\r\n]*", "", RegexOptions.Multiline).TrimEnd();
 			byte[] lineb = Encoding.UTF8.GetBytes(line + "\n");
 			try
 			{
