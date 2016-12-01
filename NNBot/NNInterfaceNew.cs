@@ -41,6 +41,7 @@ namespace NNBot
 
 		public void pushLine(string line)
 		{
+			line = Regex.Replace(line, @"^\s*$[\r\n]*", "", RegexOptions.Multiline).TrimEnd();
 			if (line == "") return;
 			//Console.WriteLine("pushLine (" + name + ") " + line);
 			queue.Add(() =>
@@ -61,8 +62,6 @@ namespace NNBot
 		private void pushLineNow(string line)
 		{
 			if (connection == null) return;
-			line = Regex.Replace(line, @"^\s*$[\r\n]*", "", RegexOptions.Multiline).TrimEnd();
-			if (line == "") return;
 			byte[] lineb = Encoding.UTF8.GetBytes(line + "\n");
 			try
 			{
