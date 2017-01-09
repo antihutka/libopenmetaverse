@@ -80,13 +80,14 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 				case ChatType.Normal:
 				case ChatType.Whisper:
 				case ChatType.Shout:
+					bool ignored = isinlist(configuration["ignoreobjectchat"], e.SourceID.ToString());
 					if (e.Message.Equals(""))
 					{
 						log = false;
 						break;
 					}
 					Console.WriteLine ("[local][" + e.FromName + "] " + e.Message);
-					if (e.SourceID != Client.Self.AgentID)
+					if (e.SourceID != Client.Self.AgentID && !ignored)
 						localchat.incomingMessage (e.Message, false);
 					break;
 				default:
