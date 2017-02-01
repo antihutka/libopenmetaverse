@@ -33,6 +33,7 @@ namespace NNBot
 			Client.Self.IM += new EventHandler<InstantMessageEventArgs> (IMHandler);
 			Client.Self.ChatFromSimulator += new EventHandler<ChatEventArgs> (ChatHandler);
 			Client.Avatars.UUIDNameReply += new EventHandler<UUIDNameReplyEventArgs> (UUIDNameHandler);
+			Client.Self.ScriptQuestion += new EventHandler<ScriptQuestionEventArgs>(PermissionRequestHandler);
 			Reply talklocal = (string s) => {
 				if (Client.Network.CurrentSim.Access == SimAccess.PG)
 				{
@@ -68,7 +69,13 @@ namespace NNBot
 				NameCache.recvName (id, e.Names [id]);
 		}
 
-private static void ChatHandler(object sender, ChatEventArgs e)
+		private static void PermissionRequestHandler(object sender, ScriptQuestionEventArgs e)
+		{
+			Console.WriteLine("Permission request: " + e.ObjectOwnerName + "/" + e.ObjectName + ":" + e.Questions);
+			Client.Self.ScriptQuestionReply(e.Simulator, e.ItemID, e.TaskID, ScriptPermission.Attach | ScriptPermission.ControlCamera | ScriptPermission.TakeControls | ScriptPermission.TrackCamera | ScriptPermission.RemapControls | ScriptPermission.TriggerAnimation);
+		}
+
+		private static void ChatHandler(object sender, ChatEventArgs e)
 		{
 			bool log = true;
 			switch (e.Type) {
