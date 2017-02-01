@@ -80,6 +80,7 @@ private static void ChatHandler(object sender, ChatEventArgs e)
 				case ChatType.Normal:
 				case ChatType.Whisper:
 				case ChatType.Shout:
+				case ChatType.RegionSayTo:
 					bool ignored = isinlist(configuration["ignoreobjectchat"], e.SourceID.ToString());
 					if (e.Message.Equals(""))
 					{
