@@ -72,7 +72,9 @@ namespace NNBot
 				othertalk *= td;
 				double targetratio = Convert.ToDouble(Bot.configuration["targetratio"]);
 				double talkadd = Convert.ToDouble(Bot.configuration["talkadd"]);
-				double talkratio = (talkadd*targetratio + selftalk) / (talkadd + othertalk + boost);
+				double respboost = 0;
+				if (timeHeard < timeTalked) respboost = Convert.ToDouble(Bot.configuration["respboost"]);
+				double talkratio = (talkadd*targetratio + selftalk) / (talkadd + othertalk + boost + respboost);
 				talkratio /= targetratio;
 				talkProb /= Math.Pow(talkratio, 8) + 0.01;
 				double talkthr = Convert.ToDouble(Bot.configuration["talkthr"]);
