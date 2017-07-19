@@ -84,7 +84,7 @@ namespace OpenMetaverse.ImportExport
                 var prims = Parse();
                 if (loadImages)
                 {
-                    LoadImages(prims);
+                    LoadImages();
                 }
                 return prims;
             }
@@ -95,16 +95,13 @@ namespace OpenMetaverse.ImportExport
             }
         }
 
-        void LoadImages(List<ModelPrim> prims)
+        void LoadImages()
         {
-            foreach (var prim in prims)
+            foreach (var material in Materials)
             {
-                foreach (var face in prim.Faces)
+                if (!string.IsNullOrEmpty(material.Texture))
                 {
-                    if (!string.IsNullOrEmpty(face.Material.Texture))
-                    {
-                        LoadImage(face.Material);
-                    }
+                    LoadImage(material);
                 }
             }
         }
@@ -202,7 +199,7 @@ namespace OpenMetaverse.ImportExport
             else if (diffuse is common_color_or_texture_typeTexture)
             {
                 var tex = (common_color_or_texture_typeTexture)diffuse;
-                ret.Texture = tex.texcoord;
+                ret.Texture = tex.texture;
             }
             return ret;
 
@@ -219,8 +216,68 @@ namespace OpenMetaverse.ImportExport
             Dictionary<string, string> matEffect = new Dictionary<string, string>();
             List<ModelMaterial> tmpEffects = new List<ModelMaterial>();
 
-            // Image ID -> filename mapping
+
+/*
+            // Here is how Collada works: Texture files are refered in four steps! Check ////////////// comments below.
+
+
+            <profile_COMMON>
+                ////////////////// Here is an <image> clause which binds its id to a file name (relative to some root)
+                // <image> clauses can be found both in <library_images>, in <effect> and in <profile_XXXX>. Hopefully identifiers
+                // are unique even in the latter cases, or this code won't work.
+                <image id="material_1_effect-image" height="0" width="0">
+                    <init_from>solar_panel_001.png</init_from>
+                </image>
+                ////////////////// Here is a definition of a surface. Typically bound to a <image> using <init_from> but can also be bound as a
+                // render target for a previous pass (or it would be a useless intermediate step).
+                <newparam sid="material_1_effect-surface">
+                    <surface type="2D">
+                        <init_from>material_1_effect-image</init_from>
+                    </surface>
+                </newparam>
+                ////////////////// A sampler defines some parameters for how the texture unit is to sample the underlying surface, which is refered
+                // to by the <source> element.
+                <newparam sid="material_1_effect-sampler">
+                    <sampler2D>
+                        <source>material_1_effect-surface</source>
+                        <wrap_s>WRAP</wrap_s>
+                        <wrap_t>WRAP</wrap_t>
+                        <minfilter>LINEAR_MIPMAP_LINEAR</minfilter>
+                        <magfilter>LINEAR</magfilter>
+                        <border_color>0 0 0 0</border_color>
+                    </sampler2D>
+                </newparam>
+                <technique sid="t0">
+                    <phong>
+                        <emission>
+                            <color>0 0 0 1</color>
+                        </emission>
+                        <ambient>
+                            <color>0 0 0 0</color>
+                        </ambient>
+                        <diffuse>
+                            //////////////// The texture itself refers to the sampelr by its 'texture' property.
+                            <texture texture="material_1_effect-sampler" texcoord="texcoord0"/>
+                        </diffuse>
+                        <specular>
+                            <color>0 0 0 1</color>
+                        </specular>
+                        <shininess>
+                            <float>50</float>
+                        </shininess>
+                    </phong>
+                </technique>
+            </profile_COMMON>
+
+*/
+
+
+            // Image id -> filename mapping (<init_from> field in <image>)
             Dictionary<string, string> imgMap = new Dictionary<string, string>();
+            // Surface sid to Image ID mapping (<init_from> field in <surface>)
+            Dictionary<string, string> surfaceMap = new Dictionary<string, string>();
+            // Sampler2D sid -> Surface ID mapping (<source> field in <sampler>)
+            Dictionary<string, string> samplerMap = new Dictionary<string, string>();
 
             foreach (var item in Model.Items)
             {
@@ -276,11 +333,39 @@ namespace OpenMetaverse.ImportExport
                             string ID = effect.id;
                             foreach (var effItem in effect.Items)
                             {
-                                if (effItem is effectFx_profile_abstractProfile_COMMON)
-                                {
-                                    var teq = ((effectFx_profile_abstractProfile_COMMON)effItem).technique;
-                                    if (teq != null)
-                                    {
+                                if (effItem is image) {
+                                    var img = (image)effItem;
+                                    string IMID = img.id;
+                                    if (img.Item is string)
+                                        imgMap[IMID] = (string)img.Item;
+                                }
+                                else if (effItem is effectFx_profile_abstractProfile_COMMON) {
+                                    var pc = (effectFx_profile_abstractProfile_COMMON)effItem;
+                                    if (pc.Items != null) {
+                                        foreach (var pcitem in pc.Items) {
+                                            if (pcitem is image) {
+                                                var img = (image)pcitem;
+                                                string IMID = img.id;
+                                                if (img.Item is string)
+                                                    imgMap[IMID] = (string)img.Item;
+                                            }
+                                            else if (pcitem is common_newparam_type) {
+                                                var newparam = (common_newparam_type)pcitem;
+                                                if (newparam.Item is fx_surface_common)
+                                                {
+                                                    var surface = (fx_surface_common)newparam.Item;
+                                                    surfaceMap[newparam.sid] = surface.init_from[0].Value;
+                                                }
+                                                else if (newparam.Item is fx_sampler2D_common)
+                                                {
+                                                    var sampler = (fx_sampler2D_common)newparam.Item;
+                                                    samplerMap[newparam.sid] = sampler.source;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    var teq = pc.technique;
+                                    if (teq != null) {
                                         if (teq.Item is effectFx_profile_abstractProfile_COMMONTechniquePhong)
                                         {
                                             var shader = (effectFx_profile_abstractProfile_COMMONTechniquePhong)teq.Item;
@@ -314,13 +399,20 @@ namespace OpenMetaverse.ImportExport
                 if (matEffect.ContainsKey(effect.ID))
                 {
                     effect.ID = matEffect[effect.ID];
-                    if (!string.IsNullOrEmpty(effect.Texture))
-                    {
-                        if (imgMap.ContainsKey(effect.Texture))
-                        {
-                            effect.Texture = imgMap[effect.Texture];
+
+                    if (!string.IsNullOrEmpty(effect.Texture)) {
+                        if (samplerMap.ContainsKey(effect.Texture)) {
+                            string surfaceId = samplerMap[effect.Texture];
+
+                            if (surfaceMap.ContainsKey(surfaceId)) {
+                                string imageId = surfaceMap[surfaceId];
+
+                                if (imgMap.ContainsKey(imageId))
+                                    effect.Texture = imgMap[imageId];
+                            }
                         }
                     }
+
                     Materials.Add(effect);
                 }
             }
@@ -439,49 +531,62 @@ namespace OpenMetaverse.ImportExport
             ParseVisualScene();
             ParseMaterials();
 
-            foreach (var item in Model.Items)
-            {
-                if (item is library_geometries)
-                {
+            foreach (var item in Model.Items) {
+                if (item is library_geometries) {
                     var geometries = (library_geometries)item;
-                    foreach (var geo in geometries.geometry)
-                    {
+                    foreach (var geo in geometries.geometry) {
                         var mesh = geo.Item as mesh;
-                        if (mesh == null) continue;
+                        if (mesh == null) 
+                            continue;
 
-                        var nodes = Nodes.FindAll(n => n.MeshID == geo.id);
-                        if (nodes != null)
-                        {
-                            byte[] mesh_asset = null;
-                            foreach (var node in nodes)
-                            {
+                        var nodes = Nodes.FindAll(n => n.MeshID == geo.id);     // Find all instances of this geometry
+                        if (nodes != null) {
+                            ModelPrim firstPrim = null;         // The first prim is actually calculated, the others are just copied from it.
+
+                            Vector3 asset_scale = new Vector3(1,1,1);
+                            Vector3 asset_offset = new Vector3(0, 0, 0);            // Scale and offset between Collada and OS asset (Which is always in a unit cube)
+
+                            foreach (var node in nodes) {
                                 var prim = new ModelPrim();
                                 prim.ID = node.ID;
                                 Prims.Add(prim);
-                                Matrix4 primTransform = transform;
-                                primTransform = primTransform * node.Transform;
 
-                                AddPositions(mesh, prim, primTransform);
+                                // First node is used to create the asset. This is as the code to crate the byte array is somewhat
+                                // erroneously placed in the ModelPrim class.
+                                if (firstPrim == null) {
+                                    firstPrim = prim;
+                                    AddPositions(out asset_scale, out asset_offset, mesh, prim, transform);     // transform is used only for inch -> meter and up axis transform. 
 
-                                foreach (var mitem in mesh.Items)
-                                {
-                                    if (mitem is triangles)
-                                    {
-                                        AddFacesFromPolyList(Triangles2Polylist((triangles)mitem), mesh, prim, primTransform);
+                                    foreach (var mitem in mesh.Items) {
+                                        if (mitem is triangles)
+                                            AddFacesFromPolyList(Triangles2Polylist((triangles)mitem), mesh, prim, transform);  // Transform is used to turn normals according to up axis
+                                        if (mitem is polylist)
+                                            AddFacesFromPolyList((polylist)mitem, mesh, prim, transform);
                                     }
-                                    if (mitem is polylist)
-                                    {
-                                        AddFacesFromPolyList((polylist)mitem, mesh, prim, primTransform);
-                                    }
-                                }
 
-                                if (mesh_asset == null)
-                                {
                                     prim.CreateAsset(UUID.Zero);
-                                    mesh_asset = prim.Asset;
                                 }
-                                else
-                                    prim.Asset = mesh_asset;
+                                else {
+                                     // Copy the values set by Addpositions and AddFacesFromPolyList as these are the same as long as the mesh is the same
+                                     prim.Asset = firstPrim.Asset;
+                                     prim.BoundMin = firstPrim.BoundMin;
+                                     prim.BoundMax = firstPrim.BoundMax;
+                                     prim.Positions = firstPrim.Positions;
+                                     prim.Faces = firstPrim.Faces;
+                                }
+
+                                // Note: This ignores any shear or similar non-linear effects. This can cause some problems but it
+                                // is unlikely that authoring software can generate such matrices.
+                                node.Transform.Decompose(out prim.Scale, out prim.Rotation, out prim.Position);
+                                float roll, pitch, yaw;
+                                node.Transform.GetEulerAngles(out roll, out pitch, out yaw);
+
+                                // The offset created when normalizing the mesh vertices into the OS unit cube must be rotated
+                                // before being added to the position part of the Collada transform. 
+                                Matrix4 rot = Matrix4.CreateFromQuaternion(prim.Rotation);              // Convert rotation to matrix for for Transform
+                                Vector3 offset = Vector3.Transform(asset_offset * prim.Scale, rot);     // The offset must be rotated and mutiplied by the Collada file's scale as the offset is added during rendering with the unit cube mesh already multiplied by the compound scale.
+                                prim.Position += offset;
+                                prim.Scale *= asset_scale;                                              // Modify scale from Collada instance by the rescaling done in AddPositions()
                             }
                         }
                     }
@@ -503,7 +608,7 @@ namespace OpenMetaverse.ImportExport
             return null;
         }
 
-        void AddPositions(mesh mesh, ModelPrim prim, Matrix4 transform)
+        void AddPositions(out Vector3 scale, out Vector3 offset, mesh mesh, ModelPrim prim, Matrix4 transform)
         {
             prim.Positions = new List<Vector3>();
             source posSrc = FindSource(mesh.source, mesh.vertices.input[0].source);
@@ -530,21 +635,20 @@ namespace OpenMetaverse.ImportExport
                 if (pos.Z < prim.BoundMin.Z) prim.BoundMin.Z = pos.Z;
             }
 
-            prim.Scale = prim.BoundMax - prim.BoundMin;
-            prim.Position = prim.BoundMin + (prim.Scale / 2);
+            scale = prim.BoundMax - prim.BoundMin;
+            offset = prim.BoundMin + (scale / 2);
 
             // Fit vertex positions into identity cube -0.5 .. 0.5
             for (int i = 0; i < prim.Positions.Count; i++)
             {
                 Vector3 pos = prim.Positions[i];
                 pos = new Vector3(
-                    prim.Scale.X == 0 ? 0 : ((pos.X - prim.BoundMin.X) / prim.Scale.X) - 0.5f,
-                    prim.Scale.Y == 0 ? 0 : ((pos.Y - prim.BoundMin.Y) / prim.Scale.Y) - 0.5f,
-                    prim.Scale.Z == 0 ? 0 : ((pos.Z - prim.BoundMin.Z) / prim.Scale.Z) - 0.5f
+                    scale.X == 0 ? 0 : ((pos.X - prim.BoundMin.X) / scale.X) - 0.5f,
+                    scale.Y == 0 ? 0 : ((pos.Y - prim.BoundMin.Y) / scale.Y) - 0.5f,
+                    scale.Z == 0 ? 0 : ((pos.Z - prim.BoundMin.Z) / scale.Z) - 0.5f
                     );
                 prim.Positions[i] = pos;
             }
-
         }
 
         int[] StrToArray(string s)
@@ -595,7 +699,11 @@ namespace OpenMetaverse.ImportExport
 
             stride += 1;
 
-            if (posSrc == null) return;
+            if (posSrc == null) 
+                return;
+
+           if (list.vcount == "")
+                return;                     // Zero triangles (or quads). StrToArray produces one 0 entry for this so just quit and don't produce any face.
 
             var vcount = StrToArray(list.vcount);
             var idx = StrToArray(list.p);
