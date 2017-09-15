@@ -17,6 +17,7 @@ namespace NNBot
 		private readonly Bot.Reply talk;
 		private double othertalk = 1, selftalk = 100, boost = 0;
 		private bool thinking = false;
+		private int quiet = 0;
 		string kw_last;
 		string[] kw_split;
 		StreamWriter logfile = new StreamWriter("talkinfo.log");
@@ -59,6 +60,14 @@ namespace NNBot
 			}
 		}
 
+		public void setquiet(int q)
+		{
+			lock(lck)
+			{
+				quiet = q;
+			}
+		}
+
 		private void tick()
 		{
 			DateTime now = DateTime.Now;
@@ -70,6 +79,7 @@ namespace NNBot
 				double td = Convert.ToDouble(Bot.configuration["talkdecay"]);
 				selftalk *= td;
 				othertalk *= td;
+				if (quiet > 0) quiet--;
 				double targetratio = Convert.ToDouble(Bot.configuration["targetratio"]);
 				double talkadd = Convert.ToDouble(Bot.configuration["talkadd"]);
 				double respboost = 0;
@@ -79,11 +89,12 @@ namespace NNBot
 				talkProb /= Math.Pow(talkratio, 8) + 0.00001;
 				double talkthr = Convert.ToDouble(Bot.configuration["talkthr"]);
 				double talkthrdiv = Convert.ToDouble(Bot.configuration["talkthrdiv"]);
-				if (selftalk / targetratio + othertalk > talkthr) talkProb /= Math.Exp((selftalk / targetratio + othertalk - talkthr)/(talkthrdiv));
+				double talkthrottle = selftalk / targetratio + othertalk - talkthr + quiet * 10;
+				if (talkthrottle > 0) talkProb /= Math.Exp((talkthrottle)/(talkthrdiv));
 				if (talkProb > 1) talkProb = 1;
 				if (thinking) talkProb = 0;
 				string message = "tHear=" + timeHeard.ToString("n2") + " tTalk=" + timeTalked.ToString("n2") + " boost=" + boost.ToString("n0") +
-								 " oTalk=" + othertalk.ToString("n4") + " sTalk=" + selftalk.ToString("n4") +
+				                                     " quiet=" + quiet.ToString() + " oTalk=" + othertalk.ToString("n4") + " sTalk=" + selftalk.ToString("n4") +
 				                                     " ratio=" + talkratio.ToString("n4") + " prob=" + (talkProb*100).ToString("n2") + "%";
 				if (Convert.ToInt32(Bot.configuration["talkinfo"]) > 0)
 					                                     Console.WriteLine(message);

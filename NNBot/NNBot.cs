@@ -187,11 +187,18 @@ namespace NNBot
 							//Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
 							//Thread.Sleep(3000);
 							Console.WriteLine(s);
-						processCommand(e.IM.Message, reply);
+						processCommand(e.IM.Message, 100, reply);
 						log = false;
-					} else if (e.IM.FromAgentName.Equals("Second Life")) {
+					}
+					else if (e.IM.FromAgentName.Equals("Second Life"))
+					{
 						Console.WriteLine("[UserOffline] " + NameCache.getName(e.IM.FromAgentID));
 						log = false;
+					}
+					else if (e.IM.Message.StartsWith("/!"))
+					{
+						Console.WriteLine("[UserCommand][" + e.IM.FromAgentName + "] " + e.IM.Message);
+						processCommand(e.IM.Message.Substring(2), 0, (s) => Console.WriteLine(s));
 					} else {
 							Console.WriteLine ("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
 							dbw.logIMEvent (e);
@@ -266,7 +273,7 @@ namespace NNBot
 			}
 		}
 
-		private static void processCommand (string command, Reply reply)
+		private static void processCommand (string command, int accesslevel, Reply reply)
 		{
 			command=command.Trim();
 			var i = command.IndexOf (" ");
@@ -275,6 +282,12 @@ namespace NNBot
 			split (command, " ", out c, out a);
 
 			Vector3 selfpos = Client.Network.CurrentSim.AvatarPositions[Client.Self.AgentID];
+
+			if (accesslevel < 100 && c != "quiet")
+			{
+				Console.WriteLine("Bad accesslevel " + accesslevel.ToString() + " for command <" + c + ">");
+				return;
+			}
 
 			switch (c) {
 			case "help":
@@ -411,6 +424,10 @@ namespace NNBot
 			case "whisper":
 				Client.Self.Chat (a, 0, ChatType.Whisper);
 				break;
+			case "quiet":
+					int q;
+					localchat.setquiet(int.TryParse(a, out q) ? q : 5000);
+					break;
 			default:
 				reply("Unknown command ");
 				break;
