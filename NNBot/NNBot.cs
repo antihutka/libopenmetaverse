@@ -51,7 +51,19 @@ namespace NNBot
 				Thread.Sleep (3000);
 				attachStuff ();
 				Client.Self.RetrieveInstantMessages();
+				doLoginSit ();
 			} else Console.WriteLine("Failed");
+		}
+
+		private static void doLoginSit()
+		{
+			UUID siton = UUID.Zero;
+			if (UUID.TryParse(configuration["loginsit"], out siton)) {
+				Thread.Sleep(5000);
+				Client.Self.RequestSit (siton, Vector3.Zero);
+				Client.Self.Sit ();
+				Console.WriteLine("sitting on " + siton);
+			}
 		}
 
 		private static void debugEvents()
