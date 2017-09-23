@@ -207,7 +207,7 @@ namespace NNBot
 							//Client.Self.InstantMessage (e.IM.FromAgentID, s, e.IM.IMSessionID);
 							//Thread.Sleep(3000);
 							Console.WriteLine(s);
-						processCommand(e.IM.Message, 100, reply);
+						processCommand(e.IM.Message, 100, reply, e.IM.FromAgentID);
 						log = false;
 					}
 					else if (e.IM.FromAgentName.Equals("Second Life"))
@@ -218,7 +218,7 @@ namespace NNBot
 					else if (e.IM.Message.StartsWith("/!"))
 					{
 						Console.WriteLine("[UserCommand][" + e.IM.FromAgentName + "] " + e.IM.Message);
-						processCommand(e.IM.Message.Substring(2), 0, (s) => Console.WriteLine(s));
+						processCommand(e.IM.Message.Substring(2), 0, (s) => Console.WriteLine(s), e.IM.FromAgentID);
 					}
 					else {
 						Console.WriteLine("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
@@ -303,7 +303,7 @@ namespace NNBot
 			}
 		}
 
-		private static void processCommand(string command, int accesslevel, Reply reply)
+		private static void processCommand(string command, int accesslevel, Reply reply, UUID from)
 		{
 			command = command.Trim();
 			var i = command.IndexOf(" ");
@@ -313,7 +313,7 @@ namespace NNBot
 
 			Vector3 selfpos = Client.Network.CurrentSim.AvatarPositions[Client.Self.AgentID];
 
-			if (accesslevel < 100 && c != "quiet")
+			if (accesslevel < 100 && c != "quiet" && c != "invite")
 			{
 				Console.WriteLine("Bad accesslevel " + accesslevel.ToString() + " for command <" + c + ">");
 				return;
@@ -350,6 +350,12 @@ namespace NNBot
 					else {
 						listInventory(Client.Inventory.Store.RootFolder.UUID, true, reply, a);
 					}
+					break;
+				case "invite":
+					UUID invid;
+					if (UUID.TryParse(a, out invid)) invid = from;
+					Client.Groups.Invite(UUID.Parse(configuration["invitegroup"]), new List<UUID> { UUID.Zero }, invid);
+					Console.WriteLine("Inviting " + invid + "/" + NameCache.getName(invid));
 					break;
 				case "joingroup":
 					UUID joinid;
