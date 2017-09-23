@@ -353,7 +353,7 @@ namespace NNBot
 					break;
 				case "invite":
 					UUID invid;
-					if (UUID.TryParse(a, out invid)) invid = from;
+					if (!UUID.TryParse(a, out invid)) invid = from;
 					Client.Groups.Invite(UUID.Parse(configuration["invitegroup"]), new List<UUID> { UUID.Zero }, invid);
 					Console.WriteLine("Inviting " + invid + "/" + NameCache.getName(invid));
 					break;
