@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using OpenMetaverse;
 using OpenMetaverse.Packets;
 
@@ -56,6 +57,7 @@ namespace NNBot
 				attachStuff();
 				Client.Self.RetrieveInstantMessages();
 				doLoginSit();
+				Task.Run(() => consoleCommands());
 			}
 			else Console.WriteLine("Failed");
 		}
@@ -167,6 +169,15 @@ namespace NNBot
 		public static Primitive findObjectInSim(UUID id)
 		{
 			return Client.Network.CurrentSim.ObjectsPrimitives.Find((Primitive obj) => obj.ID == id);
+		}
+
+		private static void consoleCommands()
+		{
+			while (true)
+			{
+				string l = Console.ReadLine();
+				processCommand(l, 200, (s) => Console.WriteLine(s), UUID.Zero);
+			}
 		}
 
 		private static void IMHandler(object sender, InstantMessageEventArgs e)
