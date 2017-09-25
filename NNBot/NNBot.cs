@@ -554,12 +554,7 @@ namespace NNBot
 			}
 		}
 
-		private static bool isOwner(String name)
-		{
-			return isinlist(configuration["owners"], name);
-		}
-
-		private static bool isinlist(string h, string n)
+		static bool isinlist(string h, string n)
 		{
 			return h.ToLower().Contains("[" + n.ToLower() + "]");
 		}
