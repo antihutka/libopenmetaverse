@@ -180,7 +180,7 @@ namespace NNBot
 			}
 		}
 
-		private static void IMHandler(object sender, InstantMessageEventArgs e)
+		static void IMHandler(object sender, InstantMessageEventArgs e)
 		{
 			bool log = true;
 			switch (e.IM.Dialog)
@@ -191,12 +191,12 @@ namespace NNBot
 					break;
 				case InstantMessageDialog.RequestLure:
 					Console.WriteLine("Teleport request from " + e.IM.FromAgentName + " , sending offer");
-					if (!isOwner(e.IM.FromAgentName)) Thread.Sleep(rand.Next(5000, 15000));
+					if (userAccessLevel(e.IM.FromAgentName) < 1) Thread.Sleep(rand.Next(5000, 15000));
 					Client.Self.SendTeleportLure(e.IM.FromAgentID);
 					break;
 				case InstantMessageDialog.RequestTeleport:
 					Console.WriteLine("Teleport offer from " + e.IM.FromAgentName);
-					if (isOwner(e.IM.FromAgentName) || isinlist(configuration["accepttp"], e.IM.FromAgentName))
+					if (userAccessLevel(e.IM.FromAgentName) >= commandAccessLevel("teleport"))
 						Client.Self.TeleportLureRespond(e.IM.FromAgentID, e.IM.IMSessionID, true);
 					break;
 				case InstantMessageDialog.FriendshipOffered:
@@ -211,7 +211,7 @@ namespace NNBot
 					{
 						Console.WriteLine("[group][" + e.IM.ToAgentID + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
 					}
-					else if (isOwner(e.IM.FromAgentName))
+					/*else if (isOwner(e.IM.FromAgentName))
 					{
 						Console.WriteLine("[command][" + e.IM.FromAgentName + "] " + e.IM.Message);
 						Reply reply = s =>
@@ -220,7 +220,7 @@ namespace NNBot
 							Console.WriteLine(s);
 						processCommand(e.IM.Message, 100, reply, e.IM.FromAgentID);
 						log = false;
-					}
+					}*/
 					else if (e.IM.FromAgentName.Equals("Second Life"))
 					{
 						Console.WriteLine("[UserOffline] " + NameCache.getName(e.IM.FromAgentID));
@@ -229,7 +229,8 @@ namespace NNBot
 					else if (e.IM.Message.StartsWith("/!"))
 					{
 						Console.WriteLine("[UserCommand][" + e.IM.FromAgentName + "] " + e.IM.Message);
-						processCommand(e.IM.Message.Substring(2), 0, (s) => Console.WriteLine(s), e.IM.FromAgentID);
+						processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => Console.WriteLine(s), e.IM.FromAgentID);
+						log = false;
 					}
 					else {
 						Console.WriteLine("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
@@ -314,6 +315,48 @@ namespace NNBot
 			}
 		}
 
+		private static int commandAccessLevel(string command)
+		{
+			switch (command)
+			{
+				case "quiet":
+				case "invite":
+					return 0;
+				case "help":
+					return 1;
+				case "nearby":
+				case "objects":
+				case "status":
+				case "sit":
+				case "stand":
+				case "touch":
+					return 50;
+				case "attachstuff":
+				case "say":
+				case "teleport":
+				case "shout":
+				case "whisper":
+					return 60;
+				case "setgroup":
+				case "attach":
+				case "detach":
+				case "inventory":
+				case "joingroup":
+					return 80;
+				default:
+					return 100;
+			}
+		}
+
+		private static int userAccessLevel(string username)
+		{
+			string al;
+			if (configuration.TryGetValue("access:" + username, out al))
+				return int.Parse(al);
+			else
+				return 0;
+		}
+
 		private static void processCommand(string command, int accesslevel, Reply reply, UUID from)
 		{
 			command = command.Trim();
@@ -322,9 +365,10 @@ namespace NNBot
 			char[] slash = { '/' };
 			split(command, " ", out c, out a);
 
-			Vector3 selfpos = Client.Network.CurrentSim.AvatarPositions[Client.Self.AgentID];
+			Vector3 selfpos;
+			Client.Network.CurrentSim.AvatarPositions.TryGetValue(Client.Self.AgentID, out selfpos);
 
-			if (accesslevel < 100 && c != "quiet" && c != "invite")
+			if (accesslevel < commandAccessLevel(c))
 			{
 				Console.WriteLine("Bad accesslevel " + accesslevel.ToString() + " for command <" + c + ">");
 				return;
