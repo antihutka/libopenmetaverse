@@ -20,10 +20,11 @@ namespace NNBot
 		private int quiet = 0;
 		string kw_last;
 		string[] kw_split;
-		StreamWriter logfile = new StreamWriter("talkinfo.log");
+		StreamWriter logfile;
 
 		public ConversationHandler(string key, Bot.Reply handler)
 		{
+			logfile = new StreamWriter("talkinfo." + Bot.configuration["firstname"] + "." + Bot.configuration["lastname"] + ".log");
 			talk = handler;
 			nnkey = key;
 		}
