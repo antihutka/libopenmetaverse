@@ -17,9 +17,9 @@ namespace NNBot
 				q.Add(e.Members.ContainsKey(usr));
 			};
 			Bot.Client.Groups.GroupMembersReply += handler;
+			Bot.Client.Groups.RequestGroupMembers(gr);
 			bool result = false;
 			q.TryTake(out result, 15 * 1000);
-			Bot.Client.Groups.RequestGroupMembers(gr);
 			Bot.Client.Groups.GroupMembersReply -= handler;
 			return false;
 		}
