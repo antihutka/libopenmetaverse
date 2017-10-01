@@ -109,15 +109,24 @@ namespace NNBot
 				case ChatType.Whisper:
 				case ChatType.Shout:
 				case ChatType.RegionSayTo:
-					bool ignored = isinlist(configuration["ignoreobjectchat"], e.SourceID.ToString());
-					if (e.Message.Equals(""))
+					if (e.Type == ChatType.RegionSayTo && e.Message.StartsWith("/!"))
 					{
+						string ownerName = NameCache.getName(e.OwnerID);
+						Console.WriteLine("[UserCommand][" + ownerName + "/" + e.FromName + "] " + e.Message);
+						processCommand(e.Message.Substring(2), userAccessLevel(ownerName), (s) => Console.WriteLine(s), e.SourceID);
 						log = false;
-						break;
 					}
-					Console.WriteLine("[local][" + e.FromName + "] " + e.Message);
-					if (e.SourceID != Client.Self.AgentID && !ignored)
-						localchat.incomingMessage(e.Message, false);
+					else {
+						bool ignored = isinlist(configuration["ignoreobjectchat"], e.SourceID.ToString());
+						if (e.Message.Equals(""))
+						{
+							log = false;
+							break;
+						}
+						Console.WriteLine("[local][" + e.FromName + "] " + e.Message);
+						if (e.SourceID != Client.Self.AgentID && !ignored)
+							localchat.incomingMessage(e.Message, false);
+					}
 					break;
 				default:
 					Console.WriteLine("Unknown chat type " + e.Type + " from " + e.FromName + ":" + e.Message);
