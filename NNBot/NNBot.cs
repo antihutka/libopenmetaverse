@@ -418,8 +418,13 @@ namespace NNBot
 				case "invite":
 					UUID invid;
 					if (!UUID.TryParse(a, out invid)) invid = from;
-					Client.Groups.Invite(UUID.Parse(configuration["invitegroup"]), new List<UUID> { UUID.Zero }, invid);
-					Console.WriteLine("Inviting " + invid + "/" + NameCache.getName(invid));
+					if (Groups.isInGroup(invid, UUID.Parse(configuration["invitegroup"])))
+					{
+						Console.WriteLine("User " + NameCache.getName(invid) + " already in group");
+					} else {
+						Client.Groups.Invite(UUID.Parse(configuration["invitegroup"]), new List<UUID> { UUID.Zero }, invid);
+						Console.WriteLine("Inviting " + invid + "/" + NameCache.getName(invid));
+					}
 					break;
 				case "joingroup":
 					UUID joinid;
