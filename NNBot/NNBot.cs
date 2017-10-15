@@ -112,7 +112,9 @@ namespace NNBot
 					if (e.Type == ChatType.RegionSayTo && e.Message.StartsWith("/!"))
 					{
 						string ownerName = NameCache.getName(e.OwnerID);
+						Console.ForegroundColor = ConsoleColor.Red;
 						Console.WriteLine("[UserCommand][" + ownerName + "/" + e.FromName + "] " + e.Message);
+						Console.ResetColor();
 						processCommand(e.Message.Substring(2), userAccessLevel(ownerName), (s) => Console.WriteLine(s), e.SourceID);
 						log = false;
 					}
@@ -123,7 +125,12 @@ namespace NNBot
 							log = false;
 							break;
 						}
-						Console.WriteLine("[local][" + e.FromName + "] " + e.Message);
+						if (!ignored)
+						{
+							if (e.SourceID == Client.Self.AgentID) Console.ForegroundColor = ConsoleColor.Yellow;
+							Console.WriteLine("[local][" + e.FromName + "] " + e.Message);
+							Console.ResetColor();
+						}
 						if (e.SourceID != Client.Self.AgentID && !ignored)
 							localchat.incomingMessage(e.Message, false);
 					}
@@ -185,7 +192,8 @@ namespace NNBot
 			while (true)
 			{
 				string l = Console.ReadLine();
-				processCommand(l, 200, (s) => Console.WriteLine(s), UUID.Zero);
+				Task.Run(() => processCommand(l, 200, (s) => Console.WriteLine(s), UUID.Zero));
+				Thread.Sleep(50);
 			}
 		}
 
@@ -237,12 +245,16 @@ namespace NNBot
 					}
 					else if (e.IM.Message.StartsWith("/!"))
 					{
+						Console.ForegroundColor = ConsoleColor.Red;
 						Console.WriteLine("[UserCommand][" + e.IM.FromAgentName + "] " + e.IM.Message);
+						Console.ResetColor();
 						processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => Console.WriteLine(s), e.IM.FromAgentID);
 						log = false;
 					}
 					else {
+						Console.ForegroundColor = ConsoleColor.Green;
 						Console.WriteLine("[IM <- " + e.IM.FromAgentName + "] " + e.IM.Message);
+						Console.ResetColor();
 						dbw.logIMEvent(e);
 						log = false;
 						var nni = NNInterfaceNew.getInterface(e.IM.FromAgentName);
@@ -255,7 +267,9 @@ namespace NNBot
 								return;
 							}
 							Client.Self.InstantMessage(e.IM.FromAgentID, s, e.IM.IMSessionID);
+							Console.ForegroundColor = ConsoleColor.Cyan;
 							Console.WriteLine("[IM -> " + e.IM.FromAgentName + "] " + s);
+							Console.ResetColor();
 							dbw.logSentIM(e.IM.FromAgentID, e.IM.FromAgentName, s);
 						});
 					}
@@ -369,6 +383,7 @@ namespace NNBot
 		private static void processCommand(string command, int accesslevel, Reply reply, UUID from)
 		{
 			command = command.Trim();
+			if (command == "") return;
 			var i = command.IndexOf(" ");
 			string c, a = "";
 			char[] slash = { '/' };
