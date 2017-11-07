@@ -575,7 +575,7 @@ namespace NNBot
 					break;
 				case "quiet":
 					int q;
-					localchat.setquiet(int.TryParse(a, out q) ? q : 5000);
+					localchat.setquiet(int.TryParse(a, out q) ? q : 5000, from == UUID.Zero ? "<console>" : NameCache.getName(from));
 					break;
 				default:
 					reply("Unknown command ");

@@ -21,6 +21,8 @@ namespace NNBot
 		string kw_last;
 		string[] kw_split;
 		StreamWriter logfile;
+		private int titler_last_update = 0;
+		private string quiet_by;
 
 		public ConversationHandler(string key, Bot.Reply handler)
 		{
@@ -61,11 +63,28 @@ namespace NNBot
 			}
 		}
 
-		public void setquiet(int q)
+		private void updateTitle()
 		{
+			int chan = Convert.ToInt32(Bot.configuration["titlerchannel"]);
+			int q = quiet;
+			if (chan != 0)
+			{
+				string message = "Told to be quiet by " + quiet_by + " for " + q;
+				if (q == 0) message = ".";
+				Bot.Client.Self.Chat(message, chan, OpenMetaverse.ChatType.Normal);
+				titler_last_update = q;
+			}
+		}
+
+		public void setquiet(int q, string user)
+		{
+			if (q > 9000) q = 9000;
+			if (q < 500 && quiet > 500) q = 500;
 			lock(lck)
 			{
 				quiet = q;
+				quiet_by = user;
+				updateTitle();
 			}
 		}
 
@@ -81,11 +100,13 @@ namespace NNBot
 				selftalk *= td;
 				othertalk *= td;
 				if (quiet > 0) quiet--;
+				if (quiet > 900 && timeHeard > 900) quiet -= 14;
 				double targetratio = Convert.ToDouble(Bot.configuration["targetratio"]);
 				double talkadd = Convert.ToDouble(Bot.configuration["talkadd"]);
 				double respboost = 0;
 				if (timeHeard < timeTalked) respboost = Convert.ToDouble(Bot.configuration["respboost"]);
-				double talkratio = (talkadd*targetratio + selftalk + quiet) / (talkadd + othertalk + boost + respboost);
+				double quietf = 1 + (quiet / 100.0);
+				double talkratio = quietf * (talkadd*targetratio + selftalk) / (talkadd + othertalk + boost + respboost);
 				talkratio /= targetratio;
 				talkProb /= Math.Pow(talkratio, 8) + 0.00001;
 				double talkthr = Convert.ToDouble(Bot.configuration["talkthr"]);
@@ -101,6 +122,8 @@ namespace NNBot
 					                                     Console.WriteLine(message);
 				Console.Title = message;
 				logfile.WriteLine(message); logfile.Flush();
+				if ((quiet == 0 && titler_last_update > 0) || Math.Abs(quiet - titler_last_update) >= 60)
+					updateTitle();
 			}
 
 			if (Bot.rand.NextDouble() < talkProb)
