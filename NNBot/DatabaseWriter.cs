@@ -95,7 +95,8 @@ namespace NNBot
 		public void logChatEvent(ChatEventArgs e)
 		{
 			bool fromObject = (e.OwnerID != e.SourceID);
-			string region = Bot.Client.Network.CurrentSim.Name;
+			string region = Bot?.Client?.Network?.CurrentSim?.Name ?? "<unknown>";
+			if (region == "<unknown>") Console.WriteLine("Can't get region name");
 			if (fromObject) {
 				NameCache.requestName (e.OwnerID);
 				queue.Add (() => {

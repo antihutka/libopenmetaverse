@@ -67,7 +67,7 @@ namespace NNBot
 			UUID siton = UUID.Zero;
 			if (UUID.TryParse(configuration["loginsit"], out siton))
 			{
-				Thread.Sleep(5000);
+				Thread.Sleep(6000);
 				Client.Self.RequestSit(siton, Vector3.Zero);
 				Client.Self.Sit();
 				Console.WriteLine("sitting on " + siton);
@@ -151,7 +151,9 @@ namespace NNBot
 			UUID co = Client.Inventory.FindFolderForType(FolderType.CurrentOutfit);
 			Console.WriteLine("Current outfit folder: " + co);
 			Thread.Sleep(1000);
-			var coc = Client.Inventory.FolderContents(co, Client.Self.AgentID, true, true, InventorySortOrder.ByDate, 10000);
+			Console.WriteLine("Getting folder contents");
+			var coc = Client.Inventory.FolderContents(co, Client.Self.AgentID, true, true, InventorySortOrder.ByDate, 30000);
+			Console.WriteLine("Got inventory contents");
 			Thread.Sleep(1000);
 			if (coc == null)
 			{
@@ -159,6 +161,7 @@ namespace NNBot
 				return;
 			}
 			List<InventoryItem> coitems = new List<InventoryItem>();
+			Console.WriteLine("length: " + coc.Count + "/" + coitems.Count);
 			coc.ForEach((InventoryBase obj) =>
 			{
 				if (obj is InventoryObject)

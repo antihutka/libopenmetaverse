@@ -80,6 +80,7 @@ namespace NNBot
 		{
 			if (q > 9000) q = 9000;
 			if (q < 500 && quiet > 500) q = 500;
+			if (q < 0) q = 0;
 			lock(lck)
 			{
 				quiet = q;
@@ -105,13 +106,12 @@ namespace NNBot
 				double talkadd = Convert.ToDouble(Bot.configuration["talkadd"]);
 				double respboost = 0;
 				if (timeHeard < timeTalked) respboost = Convert.ToDouble(Bot.configuration["respboost"]);
-				double quietf = 1 + (quiet / 100.0);
-				double talkratio = quietf * (talkadd*targetratio + selftalk) / (talkadd + othertalk + boost + respboost);
+				double talkratio = (talkadd*targetratio + selftalk + quiet) / (talkadd + othertalk + boost + respboost);
 				talkratio /= targetratio;
 				talkProb /= Math.Pow(talkratio, 8) + 0.00001;
 				double talkthr = Convert.ToDouble(Bot.configuration["talkthr"]);
 				double talkthrdiv = Convert.ToDouble(Bot.configuration["talkthrdiv"]);
-				double talkthrottle = selftalk / targetratio + othertalk - talkthr;
+				double talkthrottle = selftalk /* / targetratio */ + othertalk - talkthr;
 				if (talkthrottle > 0) talkProb /= Math.Exp((talkthrottle)/(talkthrdiv));
 				if (talkProb > 1) talkProb = 1;
 				if (thinking) talkProb = 0;
