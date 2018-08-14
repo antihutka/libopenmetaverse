@@ -259,7 +259,9 @@ namespace NNBot
 						Console.WriteLine("[UserCommand][" + e.IM.FromAgentName + "] " + e.IM.Message);
 						Console.ResetColor();
 						// processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => Console.WriteLine(s), e.IM.FromAgentID);
-						processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => Client.Self.InstantMessage(e.IM.FromAgentID, s, e.IM.IMSessionID), e.IM.FromAgentID);
+						string cmdout = "";
+						processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => cmdout = cmdout + s + "\n", e.IM.FromAgentID);
+						Client.Self.InstantMessage(e.IM.FromAgentID, cmdout, e.IM.IMSessionID);
 						log = false;
 					}
 					else {
