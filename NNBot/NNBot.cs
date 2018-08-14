@@ -16,6 +16,7 @@ namespace NNBot
 		public static DatabaseWriter dbw;
 		public static Random rand = new Random();
 		static ConversationHandler localchat;
+		static UUID lastsit = UUID.Zero;
 
 		public static void Main(string[] args)
 		{
@@ -259,9 +260,10 @@ namespace NNBot
 						Console.WriteLine("[UserCommand][" + e.IM.FromAgentName + "] " + e.IM.Message);
 						Console.ResetColor();
 						// processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => Console.WriteLine(s), e.IM.FromAgentID);
-						string cmdout = "";
-						processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => cmdout = cmdout + s + "\n", e.IM.FromAgentID);
-						Client.Self.InstantMessage(e.IM.FromAgentID, cmdout, e.IM.IMSessionID);
+						//string cmdout = "";
+						//processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => cmdout = cmdout + s + "\n", e.IM.FromAgentID);
+						//Client.Self.InstantMessage(e.IM.FromAgentID, cmdout, e.IM.IMSessionID);
+						processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => Client.Self.InstantMessage(e.IM.FromAgentID, s, e.IM.IMSessionID), e.IM.FromAgentID);
 						log = false;
 					}
 					else {
@@ -558,6 +560,7 @@ namespace NNBot
 					else {
 						Client.Self.RequestSit(arg, Vector3.Zero);
 						Client.Self.Sit();
+						lastsit = arg;
 					}
 					break;
 				case "stand":
