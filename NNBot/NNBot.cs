@@ -23,7 +23,7 @@ namespace NNBot
 			if (args.Length > 0)
 				configfile = args[0];
 			configuration = Config.LoadConfig(configfile);
-			Console.WriteLine(string.Join(";", configuration));
+			//Console.WriteLine(string.Join(";", configuration));
 
 			dbw = new DatabaseWriter(configuration["dbstring"]);
 
@@ -194,9 +194,16 @@ namespace NNBot
 		{
 			while (true)
 			{
-				string l = Console.ReadLine();
-				Task.Run(() => processCommand(l, 200, (s) => Console.WriteLine(s), UUID.Zero));
-				Thread.Sleep(50);
+				try
+				{
+					string l = Console.ReadLine();
+					Task.Run(() => processCommand(l, 200, (s) => Console.WriteLine(s), UUID.Zero));
+					Thread.Sleep(50);
+				}
+				catch (Exception e)
+				{
+					System.Console.WriteLine(e);
+				}
 			}
 		}
 
@@ -251,7 +258,8 @@ namespace NNBot
 						Console.ForegroundColor = ConsoleColor.Red;
 						Console.WriteLine("[UserCommand][" + e.IM.FromAgentName + "] " + e.IM.Message);
 						Console.ResetColor();
-						processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => Console.WriteLine(s), e.IM.FromAgentID);
+						// processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => Console.WriteLine(s), e.IM.FromAgentID);
+						processCommand(e.IM.Message.Substring(2), userAccessLevel(e.IM.FromAgentName), (s) => Client.Self.InstantMessage(e.IM.FromAgentID, s, e.IM.IMSessionID), e.IM.FromAgentID);
 						log = false;
 					}
 					else {
@@ -283,7 +291,13 @@ namespace NNBot
 					bool ignored = isinlist(configuration["ignoreobjectchat"], e.IM.FromAgentID.ToString());
 					string owner = NameCache.getName(ownerid);
 					Console.WriteLine("[object][" + (ignored ? "ign][" : "") + owner + "][" + e.IM.FromAgentName + "] " + e.IM.Message);
-					if (!ignored) localchat.incomingMessage(e.IM.Message, true);
+					if (!ignored)
+					{
+						string msg = e.IM.Message;
+						if (e.IM.FromAgentName == "." && msg.Contains(": "))
+							msg = msg.Substring(msg.IndexOf(": ") + 2);
+						localchat.incomingMessage(msg, true);
+					}
 					break;
 				case InstantMessageDialog.SessionSend:
 					Console.WriteLine("[session][" + e.IM.FromAgentName + "] " + e.IM.Message);
@@ -545,6 +559,7 @@ namespace NNBot
 					}
 					break;
 				case "stand":
+					Client.Self.SignaledAnimations.ForEach((KeyValuePair<UUID, int> obj) => Client.Self.AnimationStop(obj.Key, true));
 					Client.Self.Stand();
 					break;
 				case "status":

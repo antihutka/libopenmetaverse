@@ -97,7 +97,7 @@ namespace NNBot
 				while (true)
 				{
 					QueuedOperation op;
-					if (!queue.TryTake(out op, 120 * 60 * 1000))
+					if (!queue.TryTake(out op, 4 * 60 * 60 * 1000))
 					{
 						Console.WriteLine("Conversation timed out: " + name);
 						connection.Close();
