@@ -300,7 +300,7 @@ namespace NNBot
 						string msg = e.IM.Message;
 						if (e.IM.FromAgentName == "." && msg.Contains(": "))
 							msg = msg.Substring(msg.IndexOf(": ") + 2);
-						localchat.incomingMessage(msg, true);
+						localchat.incomingMessage(msg, (lastsit == e.IM.FromAgentID));
 					}
 					break;
 				case InstantMessageDialog.SessionSend:
