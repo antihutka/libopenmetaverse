@@ -22,7 +22,8 @@ namespace NNBot
 				{
 					var k = l.Substring(0, i).Trim();
 					var v = l.Substring(i + 1).Trim();
-					dic.Add(k, v);
+					//dic.Add(k, v);
+					dic[k] = v;
 				}
 			}
 		}

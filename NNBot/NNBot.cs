@@ -49,6 +49,12 @@ namespace NNBot
 			};
 			localchat = new ConversationHandler("<local>", talklocal);
 			//debugEvents ();
+			if (configuration.ContainsKey("throttle"))
+			{
+				Client.Throttle.Total = Convert.ToSingle(configuration["throttle"]);
+			}
+			Console.WriteLine("throttle set to: Ass {0}, Cld {1}, Lnd {2}, Rsn {3}, Tsk {4}, Txt {5}, Wnd {6} Total {7}", Client.Throttle.Asset, Client.Throttle.Cloud, Client.Throttle.Land,
+							  Client.Throttle.Resend, Client.Throttle.Task, Client.Throttle.Texture, Client.Throttle.Wind, Client.Throttle.Total);
 			bool loggedIn = Client.Network.Login(configuration["firstname"], configuration["lastname"], configuration["password"], "NNBot", "NNBot 0.1");
 			if (loggedIn)
 			{
@@ -66,7 +72,7 @@ namespace NNBot
 		private static void doLoginSit()
 		{
 			UUID siton = UUID.Zero;
-			if (UUID.TryParse(configuration["loginsit"], out siton))
+			if (configuration.ContainsKey("loginsit") && UUID.TryParse(configuration["loginsit"], out siton))
 			{
 				Thread.Sleep(6000);
 				Client.Self.RequestSit(siton, Vector3.Zero);
