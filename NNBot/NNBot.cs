@@ -40,7 +40,7 @@ namespace NNBot
 			Client.Groups.GroupInvitation += Groups_GroupInvitation;
 			Reply talklocal = (string s) =>
 			{
-				if (Client.Network.CurrentSim.Access == SimAccess.PG)
+				if (Client.Network.CurrentSim.Access == SimAccess.PG && Convert.ToInt32(configuration["nogtalk"]) > 0)
 				{
 					Console.WriteLine("Chat message blocked because of sim rating: " + s);
 					return;
