@@ -27,9 +27,17 @@ namespace NNBot
 				}
 			}
 		}
+
+		private static void setDefaults(Dictionary<String, String> dic)
+		{
+			dic ["singleboost"] = "1000";
+			dic ["singletime"] = "10";
+		}
+
 		public static Dictionary<String, String> LoadConfig(string file)
 		{
 			var dic = new Dictionary<String, String>();
+			setDefaults(dic);
 			readConfig("base.cfg", dic);
 			readConfig(file, dic);
 			return dic;
