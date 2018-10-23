@@ -11,8 +11,7 @@ namespace NNBot
 	public class ConversationHandler
 	{
 		private readonly object lck = new object();
-		private DateTime lastHeard;
-		private DateTime lastTalked;
+		private DateTime lastHeard, lastTalked, lastSourceChange;
 		readonly string nnkey;
 		private readonly Bot.Reply talk;
 		private double othertalk = 1, selftalk = 100, boost = 0;
@@ -23,6 +22,7 @@ namespace NNBot
 		StreamWriter logfile;
 		private int titler_last_update = 0;
 		private string quiet_by;
+		private OpenMetaverse.UUID lastSource = OpenMetaverse.UUID.Zero;
 
 		public ConversationHandler(string key, Bot.Reply handler)
 		{
@@ -35,6 +35,7 @@ namespace NNBot
 		{
 			lastTalked = DateTime.Now;
 			lastHeard = lastTalked;
+			lastSourceChange = DateTime.Now;
 			Task.Run(() =>
 			{
 				while (true)
@@ -45,7 +46,7 @@ namespace NNBot
 			});
 		}
 
-		public void incomingMessage(string message, bool fromObj)
+		public void incomingMessage(string message, bool fromObj, OpenMetaverse.UUID source)
 		{
 			NNInterfaceNew.getInterface(nnkey).pushLine(message);
 			string kwc = Bot.configuration["keywords"];
@@ -57,6 +58,10 @@ namespace NNBot
 			bool has_kw = kw_split.Any((s) => message.Contains(s));
 			lock (lck)
 			{
+				if (lastSource != source) {
+					lastSource = source;
+					lastSourceChange = lastHeard;
+				}
 				lastHeard = DateTime.Now;
 				othertalk += message.Length;
 				if (has_kw && !fromObj) boost += Convert.ToDouble(Bot.configuration["boostamount"]);
@@ -94,6 +99,7 @@ namespace NNBot
 			DateTime now = DateTime.Now;
 			double timeHeard = (now - lastHeard).TotalMinutes;
 			double timeTalked = (now - lastTalked).TotalMinutes;
+			double timeSourceChange = (now - lastSourceChange).TotalMinutes;
 			double talkProb = 0.01;
 			lock (lck)
 			{
@@ -104,9 +110,11 @@ namespace NNBot
 				if (quiet > 900 && timeHeard > 900) quiet -= 14;
 				double targetratio = Convert.ToDouble(Bot.configuration["targetratio"]);
 				double talkadd = Convert.ToDouble(Bot.configuration["talkadd"]);
-				double respboost = 0;
-				if (timeHeard < timeTalked) respboost = Convert.ToDouble(Bot.configuration["respboost"]);
-				double talkratio = (talkadd*targetratio + selftalk + quiet) / (talkadd + othertalk + boost + respboost);
+				double totalboost = boost;
+				if (timeHeard < timeTalked) totalboost += Convert.ToDouble(Bot.configuration["respboost"]);
+				if (timeHeard < timeTalked && timeSourceChange > Convert.ToDouble (Bot.configuration ["singletime"]))
+					totalboost += Convert.ToDouble (Bot.configuration ["singleboost"]);
+				double talkratio = (talkadd*targetratio + selftalk + quiet) / (talkadd + othertalk + totalboost);
 				talkratio /= targetratio;
 				talkProb /= Math.Pow(talkratio, 8) + 0.00001;
 				double talkthr = Convert.ToDouble(Bot.configuration["talkthr"]);
@@ -115,9 +123,10 @@ namespace NNBot
 				if (talkthrottle > 0) talkProb /= Math.Exp((talkthrottle)/(talkthrdiv));
 				if (talkProb > 1) talkProb = 1;
 				if (thinking) talkProb = 0;
-				string message = "tHear=" + timeHeard.ToString("n2") + " tTalk=" + timeTalked.ToString("n2") + " boost=" + boost.ToString("n0") +
-				                                     " quiet=" + quiet.ToString() + " oTalk=" + othertalk.ToString("n4") + " sTalk=" + selftalk.ToString("n4") +
-				                                     " ratio=" + talkratio.ToString("n4") + " prob=" + (talkProb*100).ToString("n2") + "%";
+				string message = "tHear=" + timeHeard.ToString("n2") + " tTalk=" + timeTalked.ToString("n2") + 
+					" ts=" + timeSourceChange.ToString("n2") + " boost=" + totalboost.ToString("n0") +
+				        " quiet=" + quiet.ToString() + " oTalk=" + othertalk.ToString("n2") + " sTalk=" + selftalk.ToString("n2") +
+				        " ratio=" + talkratio.ToString("n4") + " prob=" + (talkProb*100).ToString("n2") + "%";
 				if (Convert.ToInt32(Bot.configuration["talkinfo"]) > 0)
 					                                     Console.WriteLine(message);
 				Console.Title = message;
