@@ -126,7 +126,7 @@ namespace NNBot
 				string message = "tHear=" + timeHeard.ToString("n2") + " tTalk=" + timeTalked.ToString("n2") + 
 					" ts=" + timeSourceChange.ToString("n2") + " boost=" + totalboost.ToString("n0") +
 				        " quiet=" + quiet.ToString() + " oTalk=" + othertalk.ToString("n2") + " sTalk=" + selftalk.ToString("n2") +
-				        " ratio=" + talkratio.ToString("n4") + " prob=" + (talkProb*100).ToString("n2") + "%";
+				        " ratio=" + talkratio.ToString("n2") + " prob=" + (talkProb*100).ToString("n2") + "%";
 				if (Convert.ToInt32(Bot.configuration["talkinfo"]) > 0)
 					                                     Console.WriteLine(message);
 				Console.Title = message;
