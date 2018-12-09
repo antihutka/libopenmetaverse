@@ -291,7 +291,7 @@ namespace NNBot
 							Console.ForegroundColor = ConsoleColor.Cyan;
 							Console.WriteLine("[IM -> " + e.IM.FromAgentName + "] " + s);
 							Console.ResetColor();
-							dbw.logSentIM(e.IM.FromAgentID, e.IM.FromAgentName, s);
+							dbw.logSentIM(e.IM.FromAgentID, e.IM.IMSessionID, e.IM.FromAgentName, s);
 						});
 					}
 					break;
