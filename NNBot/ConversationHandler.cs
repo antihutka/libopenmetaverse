@@ -22,7 +22,7 @@ namespace NNBot
 		StreamWriter logfile;
 		private int titler_last_update = 0;
 		private string quiet_by;
-		private OpenMetaverse.UUID lastSource = OpenMetaverse.UUID.Zero;
+		private string lastSource = "";
 
 		public ConversationHandler(string key, Bot.Reply handler)
 		{
@@ -46,7 +46,7 @@ namespace NNBot
 			});
 		}
 
-		public void incomingMessage(string message, bool fromObj, OpenMetaverse.UUID source)
+		public void incomingMessage(string message, bool fromObj, string source)
 		{
 			NNInterfaceNew.getInterface(nnkey).pushLine(message);
 			string kwc = Bot.configuration["keywords"];
@@ -101,6 +101,7 @@ namespace NNBot
 			double timeTalked = (now - lastTalked).TotalMinutes;
 			double timeSourceChange = (now - lastSourceChange).TotalMinutes;
 			double talkProb = 0.01;
+			string message;
 			lock (lck)
 			{
 				double td = Convert.ToDouble(Bot.configuration["talkdecay"]);
@@ -123,17 +124,17 @@ namespace NNBot
 				if (talkthrottle > 0) talkProb /= Math.Exp((talkthrottle)/(talkthrdiv));
 				if (talkProb > 1) talkProb = 1;
 				if (thinking) talkProb = 0;
-				string message = "tHear=" + timeHeard.ToString("n2") + " tTalk=" + timeTalked.ToString("n2") + 
+				message = "tHear=" + timeHeard.ToString("n2") + " tTalk=" + timeTalked.ToString("n2") + 
 					" ts=" + timeSourceChange.ToString("n2") + " boost=" + totalboost.ToString("n0") +
 				        " quiet=" + quiet.ToString() + " oTalk=" + othertalk.ToString("n2") + " sTalk=" + selftalk.ToString("n2") +
 				        " ratio=" + talkratio.ToString("n2") + " prob=" + (talkProb*100).ToString("n2") + "%";
 				if (Convert.ToInt32(Bot.configuration["talkinfo"]) > 0)
 					                                     Console.WriteLine(message);
 				Console.Title = message;
-				logfile.WriteLine(message); logfile.Flush();
 				if ((quiet == 0 && titler_last_update > 0) || Math.Abs(quiet - titler_last_update) >= 60)
 					updateTitle();
 			}
+			logfile.WriteLine(message); logfile.Flush();
 
 			if (Bot.rand.NextDouble() < talkProb)
 			{

@@ -118,26 +118,27 @@ namespace NNBot
 			});
 		}
 
-		private void logIM(string region, int type, string fromname, UUID fromuuid, string fromdisplayname, string botname, string message)
+		private void logIM(string region, int type, string fromname, UUID fromuuid, string fromdisplayname, string botname, UUID sessionid, string message)
 		{
 			MySqlCommand cmd = conn.CreateCommand ();
-			cmd.CommandText = "INSERT INTO im(region, type, fromname, fromuuid, fromdisplayname, botname, message)" +
-				"VALUES(?region, ?type, ?fromname, ?fromuuid, ?fromdisplayname, ?botname, ?message)";
+			cmd.CommandText = "INSERT INTO im(region, type, fromname, fromuuid, fromdisplayname, botname, sessionid, message)" +
+				"VALUES(?region, ?type, ?fromname, ?fromuuid, ?fromdisplayname, ?botname, ?sessionid, ?message)";
 			cmd.Parameters.AddWithValue ("?region", region);
 			cmd.Parameters.AddWithValue ("?type", type);
 			cmd.Parameters.AddWithValue ("?fromname", fromname);
 			cmd.Parameters.AddWithValue ("?fromuuid", fromuuid.ToString());
 			cmd.Parameters.AddWithValue ("?fromdisplayname", fromdisplayname);
 			cmd.Parameters.AddWithValue ("?botname", botname);
+			cmd.Parameters.AddWithValue("?sessionid", sessionid);
 			cmd.Parameters.AddWithValue ("?message", message);
 			cmd.ExecuteNonQuery ();
 		}
 
-		public void logSentIM(UUID to, string name, string message)
+		public void logSentIM(UUID to, UUID sessionid, string name, string message)
 		{
 			string region = Bot.Client.Network.CurrentSim.Name;
 			queue.Add (() => {
-				logIM(region, -100, name, to, "", Bot.Client.Self.Name, message);
+				logIM(region, -100, name, to, "", Bot.Client.Self.Name, sessionid, message);
 			});
 		}
 
@@ -145,7 +146,7 @@ namespace NNBot
 		{
 			string region = Bot.Client.Network.CurrentSim.Name;
 			queue.Add (() => {
-				logIM(region, (int)e.IM.Dialog, e.IM.FromAgentName, e.IM.FromAgentID, "", Bot.Client.Self.Name, e.IM.Message);
+				logIM(region, (int)e.IM.Dialog, e.IM.FromAgentName, e.IM.FromAgentID, "", Bot.Client.Self.Name, e.IM.IMSessionID, e.IM.Message);
 			});
 		}
 	}
