@@ -22,7 +22,7 @@ namespace NNBot
 		StreamWriter logfile;
 		private int titler_last_update = 0;
 		private string quiet_by;
-		private OpenMetaverse.UUID lastSource = OpenMetaverse.UUID.Zero;
+		private string lastSource = "";
 
 		public ConversationHandler(string key, Bot.Reply handler)
 		{
@@ -46,7 +46,7 @@ namespace NNBot
 			});
 		}
 
-		public void incomingMessage(string message, bool fromObj, OpenMetaverse.UUID source)
+		public void incomingMessage(string message, bool fromObj, string source)
 		{
 			NNInterfaceNew.getInterface(nnkey).pushLine(message);
 			string kwc = Bot.configuration["keywords"];

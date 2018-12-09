@@ -139,7 +139,7 @@ namespace NNBot
 							Console.ResetColor();
 						}
 						if (e.SourceID != Client.Self.AgentID && !ignored)
-						localchat.incomingMessage(e.Message, false, e.SourceID);
+						localchat.incomingMessage(e.Message, false, e.FromName);
 					}
 					break;
 				default:
@@ -306,7 +306,7 @@ namespace NNBot
 						string msg = e.IM.Message;
 						if (e.IM.FromAgentName == "." && msg.Contains(": "))
 							msg = msg.Substring(msg.IndexOf(": ") + 2);
-						localchat.incomingMessage(msg, (lastsit == e.IM.FromAgentID), e.IM.FromAgentID);
+						localchat.incomingMessage(msg, (lastsit == e.IM.FromAgentID), e.IM.FromAgentName);
 					}
 					break;
 				case InstantMessageDialog.SessionSend:
