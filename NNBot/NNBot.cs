@@ -80,6 +80,7 @@ namespace NNBot
 					string tpto = configuration [k];
 					System.Console.WriteLine ("Trying to teleport to: " + tpto);
 					Client.Self.Teleport (tpto, new Vector3 (128.0f, 128.0f, 128.0f));
+					Thread.Sleep (30000);
 				} else {
 					return;
 				}
