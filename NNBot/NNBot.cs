@@ -63,10 +63,27 @@ namespace NNBot
 				Thread.Sleep(3000);
 				attachStuff();
 				Client.Self.RetrieveInstantMessages();
-				doLoginSit();
 				Task.Run(() => consoleCommands());
+				doLoginTeleport ();
+				doLoginSit();
 			}
 			else Console.WriteLine("Failed");
+		}
+
+		private static void doLoginTeleport()
+		{
+			while (true) {
+				string region = Client.Network.CurrentSim.Name;
+				System.Console.WriteLine("Current sim: " + region);
+				string k = "tpfrom:" + region;
+				if (configuration.ContainsKey (k)) {
+					string tpto = configuration [k];
+					System.Console.WriteLine ("Trying to teleport to: " + tpto);
+					Client.Self.Teleport (tpto, new Vector3 (128.0f, 128.0f, 128.0f));
+				} else {
+					return;
+				}
+			}
 		}
 
 		private static void doLoginSit()
@@ -427,188 +444,190 @@ namespace NNBot
 
 			switch (c)
 			{
-				case "help":
-					reply("Commands: help inventory logout nearby objects [attach child near] say shout sit stand status whisper");
-					break;
-				case "attach":
-					var l = Client.Inventory.FetchItem(UUID.Parse(a), Client.Self.AgentID, 10000);
-					Console.WriteLine("Attaching " + l.Name);
-					Client.Appearance.Attach((InventoryItem)l, AttachmentPoint.Default, false);
-					break;
-				case "attachstuff":
-					attachStuff();
-					break;
-				case "detach":
-					l = Client.Inventory.FetchItem(UUID.Parse(a), Client.Self.AgentID, 10000);
-					Console.WriteLine("Dettaching " + l.Name);
-					Client.Appearance.Detach((InventoryItem)l);
-					break;
-				case "inventory":
-					UUID folderid;
-					if (a == "")
-					{
-						listInventory(Client.Inventory.Store.RootFolder.UUID, false, reply, null);
-					}
-					else if (UUID.TryParse(a, out folderid))
-					{
-						listInventory(folderid, false, reply, null);
-					}
-					else {
-						listInventory(Client.Inventory.Store.RootFolder.UUID, true, reply, a);
-					}
-					break;
-				case "invite":
-					UUID invid;
-					if (!UUID.TryParse(a, out invid)) invid = from;
-					if (Groups.isInGroup(invid, UUID.Parse(configuration["invitegroup"])))
-					{
-						Console.WriteLine("User " + NameCache.getName(invid) + " already in group");
-					} else {
-						Client.Groups.Invite(UUID.Parse(configuration["invitegroup"]), new List<UUID> { UUID.Zero }, invid);
-						Console.WriteLine("Inviting " + invid + "/" + NameCache.getName(invid));
-					}
-					break;
-				case "joingroup":
-					UUID joinid;
-					if (UUID.TryParse(a, out joinid))
-					{
-						Client.Groups.RequestJoinGroup(joinid);
-					}
-					break;
-				case "logout":
-					Client.Network.Logout();
-					break;
-				case "nearby":
-					Client.Network.CurrentSim.ObjectsAvatars.ForEach(av =>
-				   {
-					   if (av.ID == Client.Self.AgentID) return;
-					   Vector3 position = Vector3.Zero;
-					   Client.Network.CurrentSim.AvatarPositions.TryGetValue(av.ID, out position);
-					   string message = av.Name + " @ " + position + " " + (selfpos - position).Length() + "m";
-					   reply(message);
-				   });
-					break;
-				case "objects":
-					var args = a.Split();
-					bool attach = Array.IndexOf(args, "attach") >= 0;
-					bool child = Array.IndexOf(args, "child") >= 0;
-					bool near = Array.IndexOf(args, "near") >= 0;
-					bool own = Array.IndexOf(args, "own") >= 0;
+			case "help":
+				reply("Commands: help inventory logout nearby objects [attach child near] say shout sit stand status whisper");
+				break;
+			case "attach":
+				var l = Client.Inventory.FetchItem(UUID.Parse(a), Client.Self.AgentID, 10000);
+				Console.WriteLine("Attaching " + l.Name);
+				Client.Appearance.Attach((InventoryItem)l, AttachmentPoint.Default, false);
+				break;
+			case "attachstuff":
+				attachStuff();
+				break;
+			case "detach":
+				l = Client.Inventory.FetchItem(UUID.Parse(a), Client.Self.AgentID, 10000);
+				Console.WriteLine("Dettaching " + l.Name);
+				Client.Appearance.Detach((InventoryItem)l);
+				break;
+			case "inventory":
+				UUID folderid;
+				if (a == "")
+				{
+					listInventory(Client.Inventory.Store.RootFolder.UUID, false, reply, null);
+				}
+				else if (UUID.TryParse(a, out folderid))
+				{
+					listInventory(folderid, false, reply, null);
+				}
+				else {
+					listInventory(Client.Inventory.Store.RootFolder.UUID, true, reply, a);
+				}
+				break;
+			case "invite":
+				UUID invid;
+				if (!UUID.TryParse(a, out invid)) invid = from;
+				if (Groups.isInGroup(invid, UUID.Parse(configuration["invitegroup"])))
+				{
+					Console.WriteLine("User " + NameCache.getName(invid) + " already in group");
+				} else {
+					Client.Groups.Invite(UUID.Parse(configuration["invitegroup"]), new List<UUID> { UUID.Zero }, invid);
+					Console.WriteLine("Inviting " + invid + "/" + NameCache.getName(invid));
+				}
+				break;
+			case "joingroup":
+				UUID joinid;
+				if (UUID.TryParse(a, out joinid))
+				{
+					Client.Groups.RequestJoinGroup(joinid);
+				}
+				break;
+			case "logout":
+				Client.Network.Logout();
+				break;
+			case "nearby":
+				Client.Network.CurrentSim.ObjectsAvatars.ForEach(av =>
+			   {
+				   if (av.ID == Client.Self.AgentID) return;
+				   Vector3 position = Vector3.Zero;
+				   Client.Network.CurrentSim.AvatarPositions.TryGetValue(av.ID, out position);
+				   string message = av.Name + " @ " + position + " " + (selfpos - position).Length() + "m";
+				   reply(message);
+			   });
+				break;
+			case "objects":
+				var args = a.Split();
+				bool attach = Array.IndexOf(args, "attach") >= 0;
+				bool child = Array.IndexOf(args, "child") >= 0;
+				bool near = Array.IndexOf(args, "near") >= 0;
+				bool own = Array.IndexOf(args, "own") >= 0;
 
-					var prims = new List<Primitive>();
-					Client.Network.CurrentSim.ObjectsPrimitives.ForEach((Primitive prim) =>
-					{
-						prims.Add(prim);
-					});
+				var prims = new List<Primitive>();
+				Client.Network.CurrentSim.ObjectsPrimitives.ForEach((Primitive prim) =>
+				{
+					prims.Add(prim);
+				});
 
-					string messagec = "";
-					prims.ForEach((Primitive prim) =>
-					{
-						if (prim.ID == UUID.Zero)
-							return;
-						if (attach != prim.IsAttachment)
-							return;
-						if (!child && !attach && prim.ParentID != 0)
-							return;
+				string messagec = "";
+				prims.ForEach((Primitive prim) =>
+				{
+					if (prim.ID == UUID.Zero)
+						return;
+					if (attach != prim.IsAttachment)
+						return;
+					if (!child && !attach && prim.ParentID != 0)
+						return;
 
-						double distance = (selfpos - prim.Position).Length();
+					double distance = (selfpos - prim.Position).Length();
 
-						if (near && distance > 20)
-							return;
+					if (near && distance > 20)
+						return;
 
-						string message = prim.ID.ToString();
-						message += " parent=" + prim.ParentID;
-						message += " dist=" + distance.ToString("#.00") + "m";
+					string message = prim.ID.ToString();
+					message += " parent=" + prim.ParentID;
+					message += " dist=" + distance.ToString("#.00") + "m";
 
-						Primitive.ObjectProperties prop = ObjPropGetter.getProperties(prim);
-						if (prop != null)
-						{
-							message += " name=" + prop.Name;
-							message += " owner=" + NameCache.getName(prop.OwnerID);
-						}
-						else
-							message += " <timed out>";
-						if (own && prop.OwnerID != Client.Self.AgentID) return;
-						messagec += message + "\n";
-						if (messagec.Length > 512)
-						{
-							reply(messagec);
-							messagec = "";
-						}
-					});
-					if (messagec != "")
-						reply(messagec);
-					break;
-				case "say":
-					Client.Self.Chat(a, 0, ChatType.Normal);
-					break;
-				case "set":
-					string left, right;
-					split(a, "=", out left, out right);
-					configuration[left] = right;
-					break;
-				case "setgroup":
-					UUID actgroup;
-					if (UUID.TryParse(a, out actgroup))
+					Primitive.ObjectProperties prop = ObjPropGetter.getProperties(prim);
+					if (prop != null)
 					{
-						Client.Groups.ActivateGroup(actgroup);
-					}
-					break;
-				case "shout":
-					Client.Self.Chat(a, 0, ChatType.Shout);
-					break;
-				case "sit":
-					UUID arg = UUID.Zero;
-					if (!UUID.TryParse(a, out arg))
-					{
-						reply("Invalid ID");
-					}
-					else {
-						Client.Self.RequestSit(arg, Vector3.Zero);
-						Client.Self.Sit();
-						lastsit = arg;
-					}
-					break;
-				case "stand":
-					Client.Self.SignaledAnimations.ForEach((KeyValuePair<UUID, int> obj) => Client.Self.AnimationStop(obj.Key, true));
-					Client.Self.Stand();
-					break;
-				case "status":
-					reply("Location: " + Client.Network.CurrentSim.Name + " @ " + Client.Network.CurrentSim.AvatarPositions[Client.Self.AgentID]);
-					reply("Avatars: " + Client.Network.CurrentSim.AvatarPositions.Count);
-					reply("Objects:" + Client.Network.CurrentSim.ObjectsPrimitives.Count);
-					break;
-				case "teleport":
-					UUID lm_uuid;
-					if (UUID.TryParse(a, out lm_uuid))
-					{
-						Client.Self.Teleport(lm_uuid);
+						message += " name=" + prop.Name;
+						message += " owner=" + NameCache.getName(prop.OwnerID);
 					}
 					else
-						Client.Self.Teleport(a, new Vector3(128.0f, 128.0f, 128.0f));
-
-					break;
-				case "touch":
-					if (UUID.TryParse(a, out lm_uuid))
+						message += " <timed out>";
+					if (own && prop.OwnerID != Client.Self.AgentID) return;
+					messagec += message + "\n";
+					if (messagec.Length > 512)
 					{
-						Primitive prim = Client.Network.CurrentSim.ObjectsPrimitives.Find((Primitive obj) => obj.ID == lm_uuid);
-						if (prim != null)
-						{
-							Client.Self.Touch(prim.LocalID);
-							reply("ok");
-						}
+						reply(messagec);
+						messagec = "";
 					}
-					break;
-				case "whisper":
-					Client.Self.Chat(a, 0, ChatType.Whisper);
-					break;
-				case "quiet":
-					int q;
-					localchat.setquiet(int.TryParse(a, out q) ? q : 5000, from == UUID.Zero ? "<console>" : NameCache.getName(from));
-					break;
-				default:
-					reply("Unknown command ");
-					break;
+				});
+				if (messagec != "")
+					reply(messagec);
+				break;
+			case "say":
+				Client.Self.Chat(a, 0, ChatType.Normal);
+				break;
+			case "set":
+				string left, right;
+				split(a, "=", out left, out right);
+				configuration[left] = right;
+				break;
+			case "setgroup":
+				UUID actgroup;
+				if (UUID.TryParse(a, out actgroup))
+				{
+					Client.Groups.ActivateGroup(actgroup);
+				}
+				break;
+			case "shout":
+				Client.Self.Chat(a, 0, ChatType.Shout);
+				break;
+			case "sit":
+				UUID arg = UUID.Zero;
+				if (a == "" && configuration.ContainsKey ("loginsit"))
+					a = configuration ["loginsit"];
+				if (!UUID.TryParse(a, out arg))
+				{
+					reply("Invalid ID");
+				}
+				else {
+					Client.Self.RequestSit(arg, Vector3.Zero);
+					Client.Self.Sit();
+					lastsit = arg;
+				}
+				break;
+			case "stand":
+				Client.Self.SignaledAnimations.ForEach((KeyValuePair<UUID, int> obj) => Client.Self.AnimationStop(obj.Key, true));
+				Client.Self.Stand();
+				break;
+			case "status":
+				reply("Location: " + Client.Network.CurrentSim.Name + " @ " + Client.Network.CurrentSim.AvatarPositions[Client.Self.AgentID]);
+				reply("Avatars: " + Client.Network.CurrentSim.AvatarPositions.Count);
+				reply("Objects:" + Client.Network.CurrentSim.ObjectsPrimitives.Count);
+				break;
+			case "teleport":
+				UUID lm_uuid;
+				if (UUID.TryParse(a, out lm_uuid))
+				{
+					Client.Self.Teleport(lm_uuid);
+				}
+				else
+					Client.Self.Teleport(a, new Vector3(128.0f, 128.0f, 128.0f));
+
+				break;
+			case "touch":
+				if (UUID.TryParse(a, out lm_uuid))
+				{
+					Primitive prim = Client.Network.CurrentSim.ObjectsPrimitives.Find((Primitive obj) => obj.ID == lm_uuid);
+					if (prim != null)
+					{
+						Client.Self.Touch(prim.LocalID);
+						reply("ok");
+					}
+				}
+				break;
+			case "whisper":
+				Client.Self.Chat(a, 0, ChatType.Whisper);
+				break;
+			case "quiet":
+				int q;
+				localchat.setquiet(int.TryParse(a, out q) ? q : 5000, from == UUID.Zero ? "<console>" : NameCache.getName(from));
+				break;
+			default:
+				reply("Unknown command ");
+				break;
 			}
 		}
 
