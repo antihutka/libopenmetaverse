@@ -48,6 +48,8 @@ namespace NNBot
 
 		public void incomingMessage(string message, bool fromObj, string source)
 		{
+			if (Convert.ToInt32(Bot.configuration["debugchat"]) > 0)
+				Console.WriteLine("Incoming chat from " + source + ":" + message);
 			NNInterfaceNew.getInterface(nnkey).pushLine(message);
 			string kwc = Bot.configuration["keywords"];
 			if (kw_last != kwc)

@@ -157,7 +157,12 @@ namespace NNBot
 							Console.ResetColor();
 						}
 						if (e.SourceID != Client.Self.AgentID && !ignored)
-						localchat.incomingMessage(e.Message, false, e.FromName);
+						{
+							string msg = e.Message;
+							if (e.FromName == ">" && msg.StartsWith("/me [secondlife://") && msg.Contains("]: "))
+								msg = msg.Substring(msg.IndexOf("]: ") + 3);
+							localchat.incomingMessage(msg, false, e.FromName);
+						}
 					}
 					break;
 				default:

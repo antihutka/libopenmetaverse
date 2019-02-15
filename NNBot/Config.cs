@@ -30,8 +30,9 @@ namespace NNBot
 
 		private static void setDefaults(Dictionary<String, String> dic)
 		{
-			dic ["singleboost"] = "1000";
-			dic ["singletime"] = "10";
+			dic["singleboost"] = "1000";
+			dic["singletime"] = "10";
+			dic["debugchat"] = "0";
 		}
 
 		public static Dictionary<String, String> LoadConfig(string file)
