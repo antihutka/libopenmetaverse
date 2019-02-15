@@ -159,9 +159,17 @@ namespace NNBot
 						if (e.SourceID != Client.Self.AgentID && !ignored)
 						{
 							string msg = e.Message;
+							string src = e.FromName;
 							if (e.FromName == ">" && msg.StartsWith("/me [secondlife://") && msg.Contains("]: "))
+							{
+								if (msg.Contains("about "))
+								{
+									src = msg.Substring(msg.IndexOf("about ") + 6);
+									src = src.Substring(0, src.IndexOf("]"));
+								}
 								msg = msg.Substring(msg.IndexOf("]: ") + 3);
-							localchat.incomingMessage(msg, false, e.FromName);
+							}
+							localchat.incomingMessage(msg, false, src);
 						}
 					}
 					break;
