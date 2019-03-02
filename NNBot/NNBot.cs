@@ -417,6 +417,7 @@ namespace NNBot
 				case "teleport":
 				case "shout":
 				case "whisper":
+				case "csay":
 					return 60;
 				case "setgroup":
 				case "attach":
