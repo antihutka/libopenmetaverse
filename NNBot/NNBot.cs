@@ -573,6 +573,12 @@ namespace NNBot
 			case "say":
 				Client.Self.Chat(a, 0, ChatType.Normal);
 				break;
+			case "csay":
+					string chan;
+					string msg;
+					split(a, " ", out chan, out msg);
+					Client.Self.Chat(msg, Convert.ToInt32(chan), ChatType.Normal);
+					break;
 			case "set":
 				string left, right;
 				split(a, "=", out left, out right);
